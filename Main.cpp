@@ -140,7 +140,6 @@ void UnloadShaderHandler()
 
 void CleanUpShaders()
 {
-	UnloadShaderHandler();
 	if (vertexShader)
 	{
 		delete vertexShader;

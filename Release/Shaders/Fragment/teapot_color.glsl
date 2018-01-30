@@ -16,6 +16,7 @@ layout ( location = 0 ) in vec4 i_color;
 
 out vec4 o_color;
 
-void main() {
+void main()
+{
 	o_color = i_color;
 }
