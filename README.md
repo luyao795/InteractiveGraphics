@@ -1,7 +1,7 @@
 # Interactive Graphics
 
 ## Credit
-- **cyCodeBase** by *Cem Yuksel*, it can be obtained **[here](https://github.com/cemyuksel/cyCodeBase "cyCodeBase source code")** and documentations can be found **[here](http://www.cemyuksel.com/cyCodeBase/code.html "cyCodeBase documentation")**
+- **cyCodeBase** by *Cem Yuksel*, it can be obtained **[here](https://github.com/cemyuksel/cyCodeBase "cyCodeBase source code")** and documentations can be found **[here](http://www.cemyuksel.com/cyCodeBase/code.html "cyCodeBase documentation")**, it has been slightly modified to be compatible with Linux environment
 - **math_3d.h** by *OGLDev*, this specific version can be obtained **[here](https://github.com/triplepointfive/ogldev/blob/master/tutorial21/math_3d.h "math_3d.h source code")**
 
 ## Introduction
