@@ -17,7 +17,7 @@
   - Go to **Project→Properties**
   - Select **C/C++ Build→Settings** from left column
   - Select **Tool Settings** tab and highlight **GCC C++ Compiler→Preprocessor** entry
-  - Set configuration to **Debug**, make sure defined symbols list contains **_DEBUG** and undefined symbols list contains **_RELEASE**
+  - Set configuration to **Debug**, make sure defined symbols list contains **_DEBUG** and undefined symbols list contains **_RELEASE**
   - Set configuration to **Release**, make sure defined symbols list contains **_RELEASE** and undefined symbols list contains **_DEBUG**
 
 ### 2. Link libraries to the project
