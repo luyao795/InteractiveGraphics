@@ -24,29 +24,33 @@
 // Gloabl variables
 namespace
 {
-	cy::TriMesh * mesh = nullptr;
-	cy::Point3f * meshData = nullptr;
-	GLuint gVertexCount; // Number of vertices in the mesh
-	GLuint VAO, VBO; // Vertex Array Object and Vertex Buffer Object
-	GLuint shaderProgramID;
-	GLuint vertexShaderID, fragmentShaderID;
-	char vertexShaderPath[FILE_PATH_BUFFER_SIZE] = "Shaders/Vertex/";
-	char fragmentShaderPath[FILE_PATH_BUFFER_SIZE] = "Shaders/Fragment/";
-	cy::GLSLShader * vertexShader = nullptr;
-	cy::GLSLShader * fragmentShader = nullptr;
-	cy::GLSLProgram * shaderProgram = nullptr;
-	GLuint gTransform; // MVP transformation matrix
-	cy::Point3f cameraPos = cy::Point3f(0.0f, 0.0f, 10.0f);
-	cy::Point3f targetPos = cy::Point3f(0.0f, 0.0f, 0.0f);
-	float rotY, rotZ = 0.0f;
-	float transX, transY = 0.0f;
-	float transDistance = 0.0f;
-	bool leftDown;
-	bool rightDown;
+	cy::TriMesh * g_mesh = nullptr;
+	cy::Point3f * g_meshVertexData = nullptr;
+	GLuint g_meshVertexCount; // Number of vertices in the mesh
+	GLuint g_vertexArrayObject, g_vertexBufferObject; // Vertex Array Object and Vertex Buffer Object
+	GLuint g_shaderProgramID;
+	GLuint g_vertexShaderID, g_fragmentShaderID;
+	char g_vertexShaderPath[FILE_PATH_BUFFER_SIZE] = "Shaders/Vertex/";
+	char g_fragmentShaderPath[FILE_PATH_BUFFER_SIZE] = "Shaders/Fragment/";
+	cy::GLSLShader * g_vertexShader = nullptr;
+	cy::GLSLShader * g_fragmentShader = nullptr;
+	cy::GLSLProgram * g_shaderProgram = nullptr;
+	GLuint g_transform; // MVP transformation matrix
+	cy::Point3f g_cameraPos = cy::Point3f(0.0f, 0.0f, 10.0f);
+	cy::Point3f g_targetPos = cy::Point3f(0.0f, 0.0f, 0.0f);
+	// Variables for controlling camera rotation in X and Z directions
+	float g_rotationDeltaX, g_rotationDeltaZ = 0.0f;
+	float g_rotationAmountX, g_rotationAmountZ = 0.0f;
+	// Variables for controlling camera zoom in/out in Z direction
+	float g_translationDeltaX, g_translationDeltaY = 0.0f;
+	float g_translationDistance = 0.0f;
+	// Flags for whether left and right mouse buttons are down
+	bool g_leftMouseButtonDown;
+	bool g_rightMouseButtonDown;
 	// MVP matrices
-	cy::Matrix4f modelMat;
-	cy::Matrix4f viewMat;
-	cy::Matrix4f projectionMat;
+	cy::Matrix4f g_modelTransformationMatrix;
+	cy::Matrix4f g_viewTransformationMatrix;
+	cy::Matrix4f g_projectionTransmationMatrix;
 	// Obtained from https://github.com/luyao795/Graphics-Application/blob/44bb4ef70675d127be293d2424a1853493547d0a/Engine/UserInput/UserInput.h
 	enum KeyCodes
 	{
@@ -97,19 +101,19 @@ void SetupGLUTContextEnvironment(int OpenGLMajorVersion, int OpenGLMinorVersion,
 	glutInitContextProfile(OpenGLProfile); // This tells the program to use a specific profile of OpenGL
 }
 
-void CreateWindowWithSpecifiedSizePositionTitle(int sizeX, int sizeY, int posX,
-		int posY, const char * title)
+void CreateWindowWithSpecifiedSizePositionTitle(int i_sizeX, int i_sizeY,
+		int i_posX, int i_posY, const char * i_windowTitle)
 {
 	glutInitDisplayMode(GLUT_RGBA | GLUT_DEPTH | GLUT_DOUBLE); // Initialize GLUT display mode
-	glutInitWindowSize(sizeX, sizeY); // Set the window's initial width & height
-	glutInitWindowPosition(posX, posY); // Position the window's initial top-left corner
-	glutCreateWindow(title); // Create a window with provided window title
+	glutInitWindowSize(i_sizeX, i_sizeY); // Set the window's initial width & height
+	glutInitWindowPosition(i_posX, i_posY); // Position the window's initial top-left corner
+	glutCreateWindow(i_windowTitle); // Create a window with provided window title
 }
 
-void LoadMeshFileWithName(const char * filename)
+void LoadMeshFileWithName(const char * i_filename)
 {
-	mesh = new cy::TriMesh();
-	bool isFileLoaded = mesh->LoadFromFileObj(filename);
+	g_mesh = new cy::TriMesh();
+	bool isFileLoaded = g_mesh->LoadFromFileObj(i_filename);
 	if (!isFileLoaded)
 	{
 		fprintf(stderr, "Cannot open specified file.\n");
@@ -119,41 +123,41 @@ void LoadMeshFileWithName(const char * filename)
 
 void UnloadMeshFile()
 {
-	if (mesh)
+	if (g_mesh)
 	{
-		delete mesh;
+		delete g_mesh;
 		//mesh = nullptr;
 	}
-	if (meshData)
+	if (g_meshVertexData)
 	{
-		delete[] meshData;
-		meshData = nullptr;
+		delete[] g_meshVertexData;
+		g_meshVertexData = nullptr;
 	}
 }
 
 void UnloadShaderHandler()
 {
-	vertexShader->Delete();
-	fragmentShader->Delete();
-	shaderProgram->Delete();
+	g_vertexShader->Delete();
+	g_fragmentShader->Delete();
+	g_shaderProgram->Delete();
 }
 
 void CleanUpShaders()
 {
-	if (vertexShader)
+	if (g_vertexShader)
 	{
-		delete vertexShader;
-		vertexShader = nullptr;
+		delete g_vertexShader;
+		g_vertexShader = nullptr;
 	}
-	if (fragmentShader)
+	if (g_fragmentShader)
 	{
-		delete fragmentShader;
-		fragmentShader = nullptr;
+		delete g_fragmentShader;
+		g_fragmentShader = nullptr;
 	}
-	if (shaderProgram)
+	if (g_shaderProgram)
 	{
-		delete shaderProgram;
-		shaderProgram = nullptr;
+		delete g_shaderProgram;
+		g_shaderProgram = nullptr;
 	}
 }
 
@@ -172,26 +176,28 @@ void InitializeGLEW()
 
 void ProcessVertexData()
 {
-	const auto vertexCount = mesh->NV();
-	gVertexCount = vertexCount;
-	meshData = new cy::Point3f[gVertexCount];
+	const auto vertexCount = g_mesh->NV();
+	g_meshVertexCount = vertexCount;
+	g_meshVertexData = new cy::Point3f[g_meshVertexCount];
 	for (size_t i = 0; i < vertexCount; i++)
 	{
-		meshData[i].x = mesh->V(i).x;
-		meshData[i].y = mesh->V(i).y;
-		meshData[i].z = mesh->V(i).z;
+		g_meshVertexData[i].x = g_mesh->V(i).x;
+		g_meshVertexData[i].y = g_mesh->V(i).y;
+		g_meshVertexData[i].z = g_mesh->V(i).z;
 	}
 }
 
-void GenerateAndBindVertexBufferObjectAndVertexArrayObject(cy::Point3f * data)
+void GenerateAndBindVertexBufferObjectAndVertexArrayObject(
+		cy::Point3f * i_meshVertexData)
 {
 	// General steps are provided by http://www.swiftless.com/tutorials/opengl4/4-opengl-4-vao.html
-	glGenVertexArrays(1, &VAO); // Generate Vertex Array Object
-	glBindVertexArray(VAO); // Bind Vertex Array Object so it's ready to use
-	glGenBuffers(1, &VBO); //Generate Vertex Buffer Object
-	glBindBuffer(GL_ARRAY_BUFFER, VBO); // Bind Vertex Buffer Object so it's ready to use
-	glBufferData(GL_ARRAY_BUFFER, sizeof(cy::Point3f) * gVertexCount, data,
-	GL_STATIC_DRAW); // Send drawing data to Vertex Buffer Object
+	glGenVertexArrays(1, &g_vertexArrayObject); // Generate Vertex Array Object
+	glBindVertexArray(g_vertexArrayObject); // Bind Vertex Array Object so it's ready to use
+	glGenBuffers(1, &g_vertexBufferObject); //Generate Vertex Buffer Object
+	glBindBuffer(GL_ARRAY_BUFFER, g_vertexBufferObject); // Bind Vertex Buffer Object so it's ready to use
+	glBufferData(GL_ARRAY_BUFFER, sizeof(cy::Point3f) * g_meshVertexCount,
+			i_meshVertexData,
+			GL_STATIC_DRAW); // Send drawing data to Vertex Buffer Object
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0); // Set up Vertex Attribute Pointer for position
 	glEnableVertexAttribArray(0); // Disable Vertex Array Object
 	glBindVertexArray(0); // Disable Vertex Buffer Object
@@ -199,77 +205,84 @@ void GenerateAndBindVertexBufferObjectAndVertexArrayObject(cy::Point3f * data)
 
 void CleanUpVertexBufferObjectAndVertexArrayObject()
 {
-	glDeleteBuffers(1, &VBO);
-	glDeleteVertexArrays(1, &VAO);
+	glDeleteBuffers(1, &g_vertexBufferObject);
+	glDeleteVertexArrays(1, &g_vertexArrayObject);
 }
 
-void CompileShaders(const char * vertexShaderPath,
-		const char * fragmentShaderPath)
+void CompileShaders(const char * i_vertexShaderPath,
+		const char * i_fragmentShaderPath)
 {
-	bool result = vertexShader->CompileFile(vertexShaderPath, GL_VERTEX_SHADER);
+	bool result = g_vertexShader->CompileFile(i_vertexShaderPath,
+	GL_VERTEX_SHADER);
 	if (!result)
 	{
 		fprintf(stderr, "Cannot compile vertex shader.\n");
 		exit(-1);
 	}
-	vertexShaderID = vertexShader->GetID();
-	shaderProgram->AttachShader(vertexShaderID);
-	result = fragmentShader->CompileFile(fragmentShaderPath,
+	g_vertexShaderID = g_vertexShader->GetID();
+	g_shaderProgram->AttachShader(g_vertexShaderID);
+	result = g_fragmentShader->CompileFile(i_fragmentShaderPath,
 	GL_FRAGMENT_SHADER);
 	if (!result)
 	{
 		fprintf(stderr, "Cannot compile fragment shader.\n");
 		exit(-1);
 	}
-	fragmentShaderID = fragmentShader->GetID();
-	shaderProgram->Build(vertexShader, fragmentShader);
-	shaderProgramID = shaderProgram->GetID();
-	shaderProgram->Bind();
-	gTransform = glGetUniformLocation(shaderProgramID, "g_transform");
-	assert(gTransform != 0xFFFFFFFF);
+	g_fragmentShaderID = g_fragmentShader->GetID();
+	g_shaderProgram->Build(g_vertexShader, g_fragmentShader);
+	g_shaderProgramID = g_shaderProgram->GetID();
+	g_shaderProgram->Bind();
+	g_transform = glGetUniformLocation(g_shaderProgramID, "g_transform");
+	assert(g_transform != 0xFFFFFFFF);
 }
 
-void CompileAndBindShaders(const char * vertexShaderFileName,
-		const char * fragmentShaderFileName)
+void CompileAndBindShaders(const char * i_vertexShaderFileName,
+		const char * i_fragmentShaderFileName)
 {
-	strcat(vertexShaderPath, vertexShaderFileName);
-	strcat(fragmentShaderPath, fragmentShaderFileName);
-	shaderProgram = new cy::GLSLProgram();
-	vertexShader = new cy::GLSLShader();
-	fragmentShader = new cy::GLSLShader();
-	CompileShaders(vertexShaderPath, fragmentShaderPath); // Compile vertex and fragment shaders from file
+	strcat(g_vertexShaderPath, i_vertexShaderFileName);
+	strcat(g_fragmentShaderPath, i_fragmentShaderFileName);
+	g_shaderProgram = new cy::GLSLProgram();
+	g_vertexShader = new cy::GLSLShader();
+	g_fragmentShader = new cy::GLSLShader();
+	CompileShaders(g_vertexShaderPath, g_fragmentShaderPath); // Compile vertex and fragment shaders from file
 }
 
 void RecompileShaders()
 {
 	UnloadShaderHandler();
-	CompileShaders(vertexShaderPath, fragmentShaderPath);
+	CompileShaders(g_vertexShaderPath, g_fragmentShaderPath);
 }
 
 void ProcessTransformation()
 {
 	// Matrices setup reference: http://www.opengl-tutorial.org/beginners-tutorials/tutorial-3-matrices/#the-model-view-and-projection-matrices
-	mesh->ComputeBoundingBox();
+	g_mesh->ComputeBoundingBox();
 
-	modelMat = cy::Matrix4f::MatrixIdentity();
-	modelMat.AddTrans((mesh->GetBoundMax() + mesh->GetBoundMin()) / 2 * -1.0f);
-	viewMat = cy::Matrix4f::MatrixView(cy::Point3f(0.0f, 20.0f, -20.0f),
-			cy::Point3f(0.0f, 0.0f, 0.0f), cy::Point3f(0.0f, 1.0f, 0.0f))
-			* cy::Matrix4f::MatrixRotationY(rotY)
-			* cy::Matrix4f::MatrixRotationX(rotZ);
-	viewMat.AddTrans(cy::Point3f(0.0f, 0.0f, transDistance));
-	projectionMat = cy::Matrix4f::MatrixPerspective(ToRadian(90.0f), 1.0f, 0.1f,
-			100.0f);
+	g_modelTransformationMatrix = cy::Matrix4f::MatrixIdentity();
+	//g_modelTransformationMatrix = cy::Matrix4f::MatrixRotationX(ToRadian(90.0f)) * g_modelTransformationMatrix;
+	g_modelTransformationMatrix.AddTrans(
+			(g_mesh->GetBoundMax() + g_mesh->GetBoundMin()) / 2 * -1.0f);
+	g_viewTransformationMatrix = cy::Matrix4f::MatrixView(
+			cy::Point3f(0.0f, 0.0f, 30.0f), cy::Point3f(0.0f, 0.0f, 0.0f),
+			cy::Point3f(0.0f, 1.0f, 0.0f));
+	g_viewTransformationMatrix *= cy::Matrix4f::MatrixRotationX(ToRadian(-90.0f));
+	g_viewTransformationMatrix *= cy::Matrix4f::MatrixRotationZ(g_rotationAmountZ);
+	g_viewTransformationMatrix *= cy::Matrix4f::MatrixRotationX(g_rotationAmountX);
+	g_viewTransformationMatrix.AddTrans(
+			cy::Point3f(0.0f, 0.0f, g_translationDistance));
+	g_projectionTransmationMatrix = cy::Matrix4f::MatrixPerspective(
+			ToRadian(90.0f), 1.0f, 0.1f, 100.0f);
 
-	cy::Matrix4f transformMat = projectionMat * viewMat * modelMat;
+	cy::Matrix4f transformMat = g_projectionTransmationMatrix
+			* g_viewTransformationMatrix * g_modelTransformationMatrix;
 
-	glUniformMatrix4fv(gTransform, 1, GL_FALSE, &transformMat.data[0]);
+	glUniformMatrix4fv(g_transform, 1, GL_FALSE, &transformMat.data[0]);
 }
 
 void DrawGeometry()
 {
-	glBindVertexArray(VAO); // Bind Vertex Array Object so it's ready to use
-	glDrawArrays(GL_POINTS, 0, gVertexCount); // Draw elements in vertex buffer
+	glBindVertexArray(g_vertexArrayObject); // Bind Vertex Array Object so it's ready to use
+	glDrawArrays(GL_POINTS, 0, g_meshVertexCount); // Draw elements in vertex buffer
 	glBindVertexArray(0); // Disable Vertex Buffer Object
 }
 
@@ -280,53 +293,58 @@ void CleanUp()
 	UnloadMeshFile();
 }
 
-void ProcessKeyPress(GLubyte key, GLint x, GLint y)
+void ProcessKeyPress(GLubyte i_key, GLint i_x, GLint i_y)
 {
 	// This section is for exiting the application with Esc key
-	if (key == KeyCodes::Escape)
+	if (i_key == KeyCodes::Escape)
 	{
 		glutLeaveMainLoop(); // Exit the infinitely event-processing loop
 		CleanUp();
 	}
 }
 
-void ProcessFunctionKeyPress(GLint key, GLint x, GLint y)
+void ProcessFunctionKeyPress(GLint i_key, GLint i_x, GLint i_y)
 {
 	// This section is for recompiling shaders with F6 key
-	if (key == GLUT_KEY_F6)
+	if (i_key == GLUT_KEY_F6)
 		RecompileShaders();
 }
 
-void ProcessMouseButtonPress(GLint button, GLint state, GLint x, GLint y)
+void ProcessMouseButtonPress(GLint i_button, GLint i_state, GLint i_x,
+		GLint i_y)
 {
-	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN)
-		leftDown = true;
+	if (i_button == GLUT_LEFT_BUTTON && i_state == GLUT_DOWN)
+		g_leftMouseButtonDown = true;
 	else
-		leftDown = false;
-	if (button == GLUT_RIGHT_BUTTON && state == GLUT_DOWN)
-		rightDown = true;
+		g_leftMouseButtonDown = false;
+	if (i_button == GLUT_RIGHT_BUTTON && i_state == GLUT_DOWN)
+		g_rightMouseButtonDown = true;
 	else
-		rightDown = false;
+		g_rightMouseButtonDown = false;
 	// Keep track of mouse position
 	{
-		transX = x;
-		transY = y;
+		g_translationDeltaX = i_x;
+		g_translationDeltaY = i_y;
+		g_rotationDeltaX = i_y;
+		g_rotationDeltaZ = i_x;
 	}
 }
 
-void ProcessMouseDragMovement(GLint x, GLint y)
+void ProcessMouseDragMovement(GLint i_x, GLint i_y)
 {
-	if (leftDown)
+	if (g_leftMouseButtonDown)
 	{
-		rotY += y * 0.0001f;
-		rotZ += x * 0.0001f;
+		g_rotationAmountX += (g_rotationDeltaX - i_y) * 0.01f;
+		g_rotationAmountZ += (g_rotationDeltaZ - i_x) * 0.01f;
+		g_rotationDeltaX = i_y;
+		g_rotationDeltaZ = i_x;
 	}
-	if (rightDown)
+	if (g_rightMouseButtonDown)
 	{
-		transDistance += (transX - x) * 0.01f;
-		transDistance += (transY - y) * 0.01f;
-		transX = x;
-		transY = y;
+		g_translationDistance += (g_translationDeltaX - i_x) * 0.01f;
+		g_translationDistance += (g_translationDeltaY - i_y) * 0.01f;
+		g_translationDeltaX = i_x;
+		g_translationDeltaY = i_y;
 	}
 }
 
@@ -335,7 +353,7 @@ void DisplayContent()
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Clear front buffer
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // Reset background color to black
 	ProcessTransformation(); // Calculate MVP matrix for transformation
-	GenerateAndBindVertexBufferObjectAndVertexArrayObject(meshData); // Creation and using Vertex Array Object and Vertex Buffer Object
+	GenerateAndBindVertexBufferObjectAndVertexArrayObject(g_meshVertexData); // Creation and using Vertex Array Object and Vertex Buffer Object
 	DrawGeometry(); // Draw geometry onto the screen
 	glutSwapBuffers(); // Swap front and back buffer
 }
