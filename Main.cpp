@@ -126,7 +126,7 @@ void UnloadMeshFile()
 	if (g_mesh)
 	{
 		delete g_mesh;
-		//mesh = nullptr;
+		//g_mesh = nullptr;
 	}
 	if (g_meshVertexData)
 	{
