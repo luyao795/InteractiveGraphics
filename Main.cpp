@@ -21,13 +21,20 @@
 
 #define FILE_PATH_BUFFER_SIZE 1024
 
-// Gloabl variables
+// Global Constants
+namespace
+{
+	constexpr auto gc_numberOfVerticesPerTriangle = 3;
+}
+
+// Gloabl Variables
 namespace
 {
 	cy::TriMesh * g_mesh = nullptr;
 	cy::Point3f * g_meshVertexData = nullptr;
-	GLuint g_meshVertexCount; // Number of vertices in the mesh
-	GLuint g_vertexArrayObject, g_vertexBufferObject; // Vertex Array Object and Vertex Buffer Object
+	GLuint * g_meshIndexData = nullptr;
+	GLuint g_meshVertexCount, g_meshIndexCount; // Number of vertices and indices in the mesh
+	GLuint g_vertexArrayObject, g_vertexBufferObject, g_indexBufferObject; // Vertex Array Object, Vertex Buffer Object and Index Buffer Object
 	GLuint g_shaderProgramID;
 	GLuint g_vertexShaderID, g_fragmentShaderID;
 	char g_vertexShaderPath[FILE_PATH_BUFFER_SIZE] = "Shaders/Vertex/";
@@ -126,12 +133,17 @@ void UnloadMeshFile()
 	if (g_mesh)
 	{
 		delete g_mesh;
-		//g_mesh = nullptr;
+		g_mesh = nullptr;
 	}
 	if (g_meshVertexData)
 	{
 		delete[] g_meshVertexData;
 		g_meshVertexData = nullptr;
+	}
+	if (g_meshIndexData)
+	{
+		delete[] g_meshIndexData;
+		g_meshIndexData = nullptr;
 	}
 }
 
@@ -187,6 +199,21 @@ void ProcessVertexData()
 	}
 }
 
+void ProcessIndexData()
+{
+	const auto triangleCount = g_mesh->NF();
+	const auto indexCount = triangleCount * gc_numberOfVerticesPerTriangle;
+	g_meshIndexCount = indexCount;
+	g_meshIndexData = new GLuint[g_meshIndexCount];
+	for (size_t currentTriangleIndex = 0; currentTriangleIndex < triangleCount; currentTriangleIndex++)
+	{
+		for(size_t currentIndexInTriangle = 0; currentIndexInTriangle < gc_numberOfVerticesPerTriangle; currentIndexInTriangle++)
+		{
+			g_meshIndexData[currentTriangleIndex * gc_numberOfVerticesPerTriangle + currentIndexInTriangle] = g_mesh->F(currentTriangleIndex).v[currentIndexInTriangle];
+		}
+	}
+}
+
 void GenerateAndBindVertexBufferObjectAndVertexArrayObject(
 		cy::Point3f * i_meshVertexData)
 {
@@ -201,6 +228,9 @@ void GenerateAndBindVertexBufferObjectAndVertexArrayObject(
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0); // Set up Vertex Attribute Pointer for position
 	glEnableVertexAttribArray(0); // Disable Vertex Array Object
 	glBindVertexArray(0); // Disable Vertex Buffer Object
+	glBindVertexArray(g_vertexArrayObject); // Bind Vertex Array Object so it's ready to use
+	glGenBuffers(1, &g_indexBufferObject); // Generate Index Buffer Object
+	glBindBuffer(GL_ARRAY_BUFFER, g_indexBufferObject); // Bind Index Buffer Object so it's ready to use
 }
 
 void CleanUpVertexBufferObjectAndVertexArrayObject()
@@ -265,9 +295,12 @@ void ProcessTransformation()
 	g_viewTransformationMatrix = cy::Matrix4f::MatrixView(
 			cy::Point3f(0.0f, 0.0f, 30.0f), cy::Point3f(0.0f, 0.0f, 0.0f),
 			cy::Point3f(0.0f, 1.0f, 0.0f));
-	g_viewTransformationMatrix *= cy::Matrix4f::MatrixRotationX(ToRadian(-90.0f));
-	g_viewTransformationMatrix *= cy::Matrix4f::MatrixRotationZ(g_rotationAmountZ);
-	g_viewTransformationMatrix *= cy::Matrix4f::MatrixRotationX(g_rotationAmountX);
+	g_viewTransformationMatrix *= cy::Matrix4f::MatrixRotationX(
+			ToRadian(-90.0f));
+	g_viewTransformationMatrix *= cy::Matrix4f::MatrixRotationZ(
+			g_rotationAmountZ);
+	g_viewTransformationMatrix *= cy::Matrix4f::MatrixRotationX(
+			g_rotationAmountX);
 	g_viewTransformationMatrix.AddTrans(
 			cy::Point3f(0.0f, 0.0f, g_translationDistance));
 	g_projectionTransmationMatrix = cy::Matrix4f::MatrixPerspective(
