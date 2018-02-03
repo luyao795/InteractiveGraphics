@@ -35,10 +35,14 @@ namespace
 	cy::TriMesh * g_mesh = nullptr;
 	cy::Point3f * g_meshVertexData = nullptr;
 	GLuint * g_meshIndexData = nullptr;
+	cy::Point3f * g_meshNormalData = nullptr;
 
-	GLuint g_meshVertexCount, g_meshIndexCount; // Number of vertices and indices in the mesh
+	// Number of vertices, indices and normals in the mesh
+	GLuint g_meshVertexCount, g_meshIndexCount, g_meshNormalCount;
 
-	GLuint g_vertexArrayObject, g_vertexBufferObject, g_indexBufferObject; // Vertex Array Object, Vertex Buffer Object and Index Buffer Object
+	// Vertex Array Object, Vertex Buffer Object, Index Buffer Object and Normal Buffer Object
+	GLuint g_vertexArrayObject, g_vertexBufferObject, g_indexBufferObject,
+			g_normalBufferObject;
 
 	GLuint g_shaderProgramID;
 	GLuint g_vertexShaderID, g_fragmentShaderID;
@@ -50,7 +54,8 @@ namespace
 	cy::GLSLShader * g_fragmentShader = nullptr;
 	cy::GLSLProgram * g_shaderProgram = nullptr;
 
-	GLuint g_transform; // MVP transformation matrix
+	GLuint g_vertexTransform; // MVP transformation matrix
+	GLuint g_normalTransform; // Normal transformation matrix
 	cy::Point3f g_cameraPos = cy::Point3f(0.0f, 0.0f, 10.0f);
 	cy::Point3f g_targetPos = cy::Point3f(0.0f, 0.0f, 0.0f);
 
@@ -150,6 +155,13 @@ namespace
 		}
 	}
 
+	// Initialize vertex normals for the mesh
+	void GenerateVertexNormals()
+	{
+		if (!g_mesh->HasNormals())
+			g_mesh->ComputeNormals();
+	}
+
 	// Initialize vertex buffer
 	void GenerateAndBindVertexBuffer(cy::Point3f * i_meshVertexData)
 	{
@@ -157,6 +169,9 @@ namespace
 		glBindBuffer(GL_ARRAY_BUFFER, g_vertexBufferObject); // Bind Vertex Buffer Object so it's ready to use
 		glBufferData(GL_ARRAY_BUFFER, sizeof(cy::Point3f) * g_meshVertexCount,
 				i_meshVertexData, GL_STATIC_DRAW); // Send drawing data to Vertex Buffer Object
+		glVertexAttribPointer(0, gc_numberOfVerticesPerTriangle, GL_FLOAT,
+		GL_FALSE, 0, 0); // Set up Vertex Attribute Pointer for position
+		glEnableVertexAttribArray(0); // Enable Vertex Buffer Object
 	}
 
 	// Initialize index buffer
@@ -168,18 +183,27 @@ namespace
 				i_meshIndexData, GL_STATIC_DRAW); // Send drawing data to Index Buffer Object
 	}
 
+	void GenerateAndBindNormalBuffer(cy::Point3f * i_meshNormalData)
+	{
+		glGenBuffers(1, &g_normalBufferObject);
+		glBindBuffer(GL_ARRAY_BUFFER, g_normalBufferObject);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(cy::Point3f) * g_meshNormalCount,
+				i_meshNormalData, GL_STATIC_DRAW);
+		glVertexAttribPointer(1, gc_numberOfVerticesPerTriangle, GL_FLOAT,
+		GL_FALSE, 0, 0); // Set up Vertex Attribute Pointer for position
+		glEnableVertexAttribArray(1); // Enable Normal Buffer Object
+	}
+
 	// Initialize buffers needed for the program
 	void GenerateAndBindBuffers(cy::Point3f * i_meshVertexData,
-			GLuint * i_meshIndexData)
+			GLuint * i_meshIndexData, cy::Point3f * i_meshNormalData)
 	{
 		// General steps are provided by http://www.swiftless.com/tutorials/opengl4/4-opengl-4-vao.html
 		glGenVertexArrays(1, &g_vertexArrayObject); // Generate Vertex Array Object
 		glBindVertexArray(g_vertexArrayObject); // Bind Vertex Array Object so it's ready to use
 		GenerateAndBindVertexBuffer(i_meshVertexData);
 		GenerateAndBindIndexBuffer(i_meshIndexData);
-		glVertexAttribPointer(0, gc_numberOfVerticesPerTriangle, GL_FLOAT,
-				GL_FALSE, 0, 0); // Set up Vertex Attribute Pointer for position
-		glEnableVertexAttribArray(0); // Disable Vertex Array Object
+		GenerateAndBindNormalBuffer(i_meshNormalData);
 		glBindVertexArray(0); // Unbind Vertex Array Object
 	}
 
@@ -198,6 +222,11 @@ namespace
 		{
 			delete[] g_meshIndexData;
 			g_meshIndexData = nullptr;
+		}
+		if (g_meshNormalData)
+		{
+			delete[] g_meshNormalData;
+			g_meshNormalData = nullptr;
 		}
 		if (g_mesh)
 		{
@@ -279,8 +308,12 @@ namespace
 		g_shaderProgram->Build(g_vertexShader, g_fragmentShader);
 		g_shaderProgramID = g_shaderProgram->GetID();
 		g_shaderProgram->Bind();
-		g_transform = glGetUniformLocation(g_shaderProgramID, "g_transform");
-		assert(g_transform != 0xFFFFFFFF);
+		g_vertexTransform = glGetUniformLocation(g_shaderProgramID,
+				"g_vertexTransform");
+		g_normalTransform = glGetUniformLocation(g_shaderProgramID,
+				"g_normalTransform");
+		assert(g_vertexTransform != 0xFFFFFFFF);
+		assert(g_normalTransform != 0xFFFFFFFF);
 	}
 
 	// Process filenames to compile and bind shaders
@@ -355,11 +388,38 @@ namespace
 		}
 	}
 
+	void ProcessNormalData()
+	{
+		GenerateVertexNormals();
+		const auto normalCount = g_mesh->NVN();
+		g_meshNormalCount = normalCount;
+		g_meshNormalData = new cy::Point3f[g_meshNormalCount];
+		for (size_t i = 0; i < normalCount; i++)
+		{
+			g_meshNormalData[i].x = g_mesh->VN(i).x;
+			g_meshNormalData[i].y = g_mesh->VN(i).y;
+			g_meshNormalData[i].z = g_mesh->VN(i).z;
+		}
+	}
+
 	// Store mesh related data into memory
 	void ProcessMeshData()
 	{
 		ProcessVertexData(); // Store vertex data into memory
 		ProcessIndexData(); // Store index data into memory
+		ProcessNormalData(); // Store normal data into memory
+	}
+
+	// Calculate transformation matrix for normals
+	void ProcessNormalTransformation()
+	{
+		cy::Matrix4f normalTransformMat = g_viewTransformationMatrix
+				* g_modelTransformationMatrix;
+		normalTransformMat.Invert();
+		normalTransformMat.Transpose();
+
+		glUniformMatrix4fv(g_normalTransform, 1, GL_FALSE,
+				&normalTransformMat.data[0]);
 	}
 
 	// Calculate transformation matrices
@@ -369,7 +429,6 @@ namespace
 		g_mesh->ComputeBoundingBox();
 
 		g_modelTransformationMatrix = cy::Matrix4f::MatrixIdentity();
-		//g_modelTransformationMatrix = cy::Matrix4f::MatrixRotationX(ToRadian(90.0f)) * g_modelTransformationMatrix;
 		g_modelTransformationMatrix.AddTrans(
 				(g_mesh->GetBoundMax() + g_mesh->GetBoundMin()) / 2 * -1.0f);
 		g_viewTransformationMatrix = cy::Matrix4f::MatrixView(
@@ -389,7 +448,10 @@ namespace
 		cy::Matrix4f transformMat = g_projectionTransmationMatrix
 				* g_viewTransformationMatrix * g_modelTransformationMatrix;
 
-		glUniformMatrix4fv(g_transform, 1, GL_FALSE, &transformMat.data[0]);
+		glUniformMatrix4fv(g_vertexTransform, 1, GL_FALSE,
+				&transformMat.data[0]);
+
+		ProcessNormalTransformation();
 	}
 
 	// Render geometries onto screen
@@ -406,7 +468,6 @@ namespace
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Clear front buffer
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // Reset background color to black
 		ProcessTransformation(); // Calculate MVP matrix for transformation
-		GenerateAndBindBuffers(g_meshVertexData, g_meshIndexData); // Creation and using Vertex Array Object and Vertex Buffer Object
 		DrawGeometry(); // Draw geometry onto the screen
 		glutSwapBuffers(); // Swap front and back buffer
 	}
@@ -506,6 +567,9 @@ int main(int argc, char** argv)
 	ProcessMeshData(); // Store related mesh data into memory
 
 	CompileAndBindShaders("teapot_vertex.glsl", "teapot_color.glsl"); // Compile and bind shaders to the program
+
+	GenerateAndBindBuffers(g_meshVertexData, g_meshIndexData,
+					g_meshNormalData); // Creation and using Vertex Array Object and Vertex Buffer Object
 
 	glutDisplayFunc(DisplayContent); // Register display callback handler for window re-paint
 
