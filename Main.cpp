@@ -54,8 +54,6 @@ namespace
 	cy::GLSLShader * g_fragmentShader = nullptr;
 	cy::GLSLProgram * g_shaderProgram = nullptr;
 
-	GLuint g_vertexTransform; // MVP transformation matrix
-	GLuint g_normalTransform; // Normal transformation matrix
 	cy::Point3f g_cameraPosition = cy::Point3f(0.0f, 10.0f, 30.0f);
 	cy::Point3f g_targetPosition = cy::Point3f(0.0f, 0.0f, 0.0f);
 
@@ -75,6 +73,23 @@ namespace
 	cy::Matrix4f g_modelTransformationMatrix;
 	cy::Matrix4f g_viewTransformationMatrix;
 	cy::Matrix4f g_projectionTransmationMatrix;
+
+	GLuint g_vertexTransformationMatrixID; // MVP transformation matrix ID
+	GLuint g_normalTransformationMatrixID; // Normal transformation matrix ID
+
+	// Parameters for Blinn Shading
+	cy::Point3f g_lightSource = cy::Point3f(0.0f, 10.0f, 0.0f), g_viewer =
+			g_cameraPosition, g_halfway;
+	cy::Point3f g_diffuseColor = cy::Point3f(1.0f, 0.0f, 0.0f),
+			g_specularColor = cy::Point3f(0.0f, 1.0f, 0.0f), g_ambientColor =
+					cy::Point3f(0.0f, 0.0f, 1.0f);
+	GLfloat g_shininess = 15.0f;
+	cy::Point3f g_ambientLightSource = cy::Point3f(0.0f, 0.0f, 5.0f);
+
+	GLuint g_lightSourceID, g_halfwayID;
+	GLuint g_diffuseColorID, g_specularColorID, g_ambientColorID;
+	GLuint g_shininessID;
+	GLuint g_ambientLightSourceID;
 
 	// Obtained from https://github.com/luyao795/Graphics-Application/blob/44bb4ef70675d127be293d2424a1853493547d0a/Engine/UserInput/UserInput.h
 	enum KeyCodes
@@ -208,6 +223,36 @@ namespace
 		glBindVertexArray(0); // Unbind Vertex Array Object
 	}
 
+	// Bind transformation matrices to uniform variables in shaders
+	void BindTransformations()
+	{
+		g_vertexTransformationMatrixID = glGetUniformLocation(g_shaderProgramID,
+				"g_vertexTransform");
+		//assert(g_vertexTransformationMatrixID != 0xFFFFFFFF);
+		g_normalTransformationMatrixID = glGetUniformLocation(g_shaderProgramID,
+				"g_normalTransform");
+		//assert(g_normalTransformationMatrixID != 0xFFFFFFFF);
+	}
+
+	// Bind Blinn Shading parameters to uniform variables in shaders
+	void BindBlinnShadingParameters()
+	{
+		g_shininessID = glGetUniformLocation(g_shaderProgramID, "g_shininess");
+		//assert(g_shininessID != 0xFFFFFFFF);
+		g_lightSourceID = glGetUniformLocation(g_shaderProgramID, "g_lightSource");
+		//assert(g_lightSourceID != 0xFFFFFFFF);
+		g_halfwayID = glGetUniformLocation(g_shaderProgramID, "g_halfway");
+		//assert(g_halfwayID != 0xFFFFFFFF);
+		g_ambientLightSourceID = glGetUniformLocation(g_shaderProgramID, "g_ambientLightSource");
+		//assert(g_ambientLightSourceID != 0xFFFFFFFF);
+		g_diffuseColorID = glGetUniformLocation(g_shaderProgramID, "g_diffuseColor");
+		//assert(g_diffuseColorID != 0xFFFFFFFF);
+		g_specularColorID = glGetUniformLocation(g_shaderProgramID, "g_specularColor");
+		//assert(g_specularColorID != 0xFFFFFFFF);
+		g_ambientColorID = glGetUniformLocation(g_shaderProgramID, "g_ambientColor");
+		//assert(g_ambientColorID != 0xFFFFFFFF);
+	}
+
 	// Cleanup
 	//--------
 
@@ -310,12 +355,9 @@ namespace
 		g_shaderProgram->Build(g_vertexShader, g_fragmentShader);
 		g_shaderProgramID = g_shaderProgram->GetID();
 		g_shaderProgram->Bind();
-		g_vertexTransform = glGetUniformLocation(g_shaderProgramID,
-				"g_vertexTransform");
-		g_normalTransform = glGetUniformLocation(g_shaderProgramID,
-				"g_normalTransform");
-		assert(g_vertexTransform != 0xFFFFFFFF);
-		assert(g_normalTransform != 0xFFFFFFFF);
+
+		BindTransformations();
+		BindBlinnShadingParameters();
 	}
 
 	// Process filenames to compile and bind shaders
@@ -436,7 +478,7 @@ namespace
 		cy::Matrix4f transformMat = g_projectionTransmationMatrix
 				* g_viewTransformationMatrix * g_modelTransformationMatrix;
 
-		glUniformMatrix4fv(g_vertexTransform, 1, GL_FALSE,
+		glUniformMatrix4fv(g_vertexTransformationMatrixID, 1, GL_FALSE,
 				&transformMat.data[0]);
 	}
 
@@ -451,7 +493,7 @@ namespace
 		cy::Matrix4f normalTransformMat = cy::Matrix4f(
 				normalTransformationMatrix);
 
-		glUniformMatrix4fv(g_normalTransform, 1, GL_FALSE,
+		glUniformMatrix4fv(g_normalTransformationMatrixID, 1, GL_FALSE,
 				&normalTransformMat.data[0]);
 	}
 
@@ -460,6 +502,25 @@ namespace
 	{
 		ProcessVertexTransformation();
 		ProcessNormalTransformation();
+	}
+
+	// Calculate and bind parameters for Blinn Shading
+	void ProcessBlinnShading()
+	{
+		// Calculation
+		//------------
+		g_halfway = (g_lightSource + g_viewer)
+				/ (g_lightSource + g_viewer).Length();
+
+		// Bind
+		//-----
+		glUniform1f(g_shininessID, g_shininess);
+		glUniform3fv(g_lightSourceID, 1, &g_lightSource[0]);
+		glUniform3fv(g_halfwayID, 1, &g_halfway[0]);
+		glUniform3fv(g_ambientLightSourceID, 1, &g_ambientLightSource[0]);
+		glUniform3fv(g_diffuseColorID, 1, &g_diffuseColor[0]);
+		glUniform3fv(g_specularColorID, 1, &g_specularColor[0]);
+		glUniform3fv(g_ambientColorID, 1, &g_ambientColor[0]);
 	}
 
 	// Render geometries onto screen
@@ -476,6 +537,7 @@ namespace
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Clear front buffer
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // Reset background color to black
 		ProcessTransformation(); // Calculate MVP matrix for transformation
+		ProcessBlinnShading();
 		DrawGeometry(); // Draw geometry onto the screen
 		glutSwapBuffers(); // Swap front and back buffer
 	}
