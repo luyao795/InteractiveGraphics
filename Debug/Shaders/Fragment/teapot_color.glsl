@@ -19,4 +19,5 @@ out vec4 o_color;
 void main()
 {
 	o_color = normalize( i_color );
+	//o_color = clamp( o_color, 0, 1 );
 }

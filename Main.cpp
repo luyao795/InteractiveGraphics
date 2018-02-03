@@ -56,8 +56,8 @@ namespace
 
 	GLuint g_vertexTransform; // MVP transformation matrix
 	GLuint g_normalTransform; // Normal transformation matrix
-	cy::Point3f g_cameraPos = cy::Point3f(0.0f, 0.0f, 10.0f);
-	cy::Point3f g_targetPos = cy::Point3f(0.0f, 0.0f, 0.0f);
+	cy::Point3f g_cameraPosition = cy::Point3f(0.0f, 10.0f, 30.0f);
+	cy::Point3f g_targetPosition = cy::Point3f(0.0f, 0.0f, 0.0f);
 
 	// Variables for controlling camera rotation in X and Z directions
 	float g_rotationDeltaX, g_rotationDeltaZ = 0.0f;
@@ -142,6 +142,7 @@ namespace
 		glutInitWindowSize(i_sizeX, i_sizeY); // Set the window's initial width & height
 		glutInitWindowPosition(i_posX, i_posY); // Position the window's initial top-left corner
 		glutCreateWindow(i_windowTitle); // Create a window with provided window title
+		glEnable(GL_DEPTH_TEST); // Enable depth buffer
 	}
 
 	// Initialize GLEW library
@@ -268,6 +269,7 @@ namespace
 	{
 		glDeleteBuffers(1, &g_vertexBufferObject);
 		glDeleteBuffers(1, &g_indexBufferObject);
+		glDeleteBuffers(1, &g_normalBufferObject);
 		glDeleteVertexArrays(1, &g_vertexArrayObject);
 	}
 
@@ -410,20 +412,7 @@ namespace
 		ProcessNormalData(); // Store normal data into memory
 	}
 
-	// Calculate transformation matrix for normals
-	void ProcessNormalTransformation()
-	{
-		cy::Matrix4f normalTransformMat = g_viewTransformationMatrix
-				* g_modelTransformationMatrix;
-		normalTransformMat.Invert();
-		normalTransformMat.Transpose();
-
-		glUniformMatrix4fv(g_normalTransform, 1, GL_FALSE,
-				&normalTransformMat.data[0]);
-	}
-
-	// Calculate transformation matrices
-	void ProcessTransformation()
+	void ProcessVertexTransformation()
 	{
 		// Matrices setup reference: http://www.opengl-tutorial.org/beginners-tutorials/tutorial-3-matrices/#the-model-view-and-projection-matrices
 		g_mesh->ComputeBoundingBox();
@@ -431,9 +420,8 @@ namespace
 		g_modelTransformationMatrix = cy::Matrix4f::MatrixIdentity();
 		g_modelTransformationMatrix.AddTrans(
 				(g_mesh->GetBoundMax() + g_mesh->GetBoundMin()) / 2 * -1.0f);
-		g_viewTransformationMatrix = cy::Matrix4f::MatrixView(
-				cy::Point3f(0.0f, 0.0f, 30.0f), cy::Point3f(0.0f, 0.0f, 0.0f),
-				cy::Point3f(0.0f, 1.0f, 0.0f));
+		g_viewTransformationMatrix = cy::Matrix4f::MatrixView(g_cameraPosition,
+				g_targetPosition, cy::Point3f(0.0f, 1.0f, 0.0f));
 		g_viewTransformationMatrix *= cy::Matrix4f::MatrixRotationX(
 				ToRadian(-90.0f));
 		g_viewTransformationMatrix *= cy::Matrix4f::MatrixRotationZ(
@@ -450,7 +438,27 @@ namespace
 
 		glUniformMatrix4fv(g_vertexTransform, 1, GL_FALSE,
 				&transformMat.data[0]);
+	}
 
+	// Calculate transformation matrix for normals
+	void ProcessNormalTransformation()
+	{
+		cy::Matrix3f normalTransformationMatrix =
+				g_viewTransformationMatrix.GetSubMatrix3()
+						* g_modelTransformationMatrix.GetSubMatrix3();
+		normalTransformationMatrix.Invert();
+		normalTransformationMatrix.Transpose();
+		cy::Matrix4f normalTransformMat = cy::Matrix4f(
+				normalTransformationMatrix);
+
+		glUniformMatrix4fv(g_normalTransform, 1, GL_FALSE,
+				&normalTransformMat.data[0]);
+	}
+
+	// Calculate transformation matrices
+	void ProcessTransformation()
+	{
+		ProcessVertexTransformation();
 		ProcessNormalTransformation();
 	}
 
@@ -568,8 +576,7 @@ int main(int argc, char** argv)
 
 	CompileAndBindShaders("teapot_vertex.glsl", "teapot_color.glsl"); // Compile and bind shaders to the program
 
-	GenerateAndBindBuffers(g_meshVertexData, g_meshIndexData,
-					g_meshNormalData); // Creation and using Vertex Array Object and Vertex Buffer Object
+	GenerateAndBindBuffers(g_meshVertexData, g_meshIndexData, g_meshNormalData); // Creation and using Vertex Array Object and Vertex Buffer Object
 
 	glutDisplayFunc(DisplayContent); // Register display callback handler for window re-paint
 
