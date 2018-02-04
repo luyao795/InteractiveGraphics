@@ -3,9 +3,6 @@
 
 #version 420
 
-// Entry Point
-//============
-
 // Input
 //======
 
@@ -22,6 +19,9 @@ layout ( location = 0 ) out vec4 o_color;
 
 out vec3 normal;
 out vec3 vertex;
+
+// Entry Point
+//============
 
 void main()
 {

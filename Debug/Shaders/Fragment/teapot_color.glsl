@@ -3,9 +3,6 @@
 
 #version 420
 
-// Entry Point
-//============
-
 // Input
 //======
 
@@ -17,7 +14,6 @@ in vec3 vertex;
 uniform float g_shininess;
 uniform vec3 g_lightSource;
 uniform vec3 g_viewer;
-uniform vec3 g_halfway;
 uniform vec3 g_diffuseColor;
 uniform vec3 g_specularColor;
 uniform vec3 g_ambientColor;
@@ -28,6 +24,9 @@ uniform mat4 g_normalTransform;
 //=======
 
 out vec4 o_color;
+
+// Entry Point
+//============
 
 void main()
 {

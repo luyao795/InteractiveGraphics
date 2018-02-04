@@ -26,6 +26,8 @@
 namespace
 {
 	constexpr auto gc_numberOfVerticesPerTriangle = 3;
+	const auto gc_initialLightSourceLocation = cy::Point3f(0.0f, 5.0f, 10.0f);
+	constexpr auto gc_inputControlScaleParameter = 0.01f;
 }
 
 // Gloabl Variables
@@ -65,9 +67,20 @@ namespace
 	float g_translationDeltaX, g_translationDeltaY = 0.0f;
 	float g_translationDistance = 0.0f;
 
+	// Variables for controlling light movement in X and Y direction
+	float g_lightTranslationDeltaX, g_lightTranslationDeltaY = 0.0f;
+	float g_lightTranslationDistanceX, g_lightTranslationDistanceY = 0.0f;
+
+	// Variables for controlling light rotation in Z direction
+	float g_lightRotationDeltaX, g_lightRotationDeltaY = 0.0f;
+	float g_lightRotationAmountX, g_lightRotationAmountY = 0.0f;
+
 	// Flags for whether left and right mouse buttons are down
-	bool g_leftMouseButtonDown;
-	bool g_rightMouseButtonDown;
+	bool g_leftMouseButtonDown = false;
+	bool g_rightMouseButtonDown = false;
+
+	// Flags for whether certain keys are down
+	bool g_controlDown = false;
 
 	// MVP matrices
 	cy::Matrix4f g_modelTransformationMatrix;
@@ -79,18 +92,16 @@ namespace
 	GLuint g_modelTransformationMatrixID; // Model transformation matrix ID
 
 	// Parameters for Blinn Shading
-	cy::Point3f g_lightSource = cy::Point3f(0.0f, 0.0f, 8.0f), g_viewer =
+	cy::Point3f g_lightSource = gc_initialLightSourceLocation, g_viewer =
 			g_cameraPosition, g_halfway;
 	cy::Point3f g_diffuseColor = cy::Point3f(1.0f, 0.0f, 1.0f),
 			g_specularColor = cy::Point3f(0.0f, 1.0f, 1.0f), g_ambientColor =
 					cy::Point3f(0.2f, 0.2f, 0.2f);
 	GLfloat g_shininess = 50.0f;
-	cy::Point3f g_ambientLightSource = cy::Point3f(0.0f, 0.0f, 5.0f);
 
-	GLuint g_lightSourceID, g_viewerID, g_halfwayID;
+	GLuint g_lightSourceID, g_viewerID;
 	GLuint g_diffuseColorID, g_specularColorID, g_ambientColorID;
 	GLuint g_shininessID;
-	GLuint g_ambientLightSourceID;
 
 	// Obtained from https://github.com/luyao795/Graphics-Application/blob/44bb4ef70675d127be293d2424a1853493547d0a/Engine/UserInput/UserInput.h
 	enum KeyCodes
@@ -132,6 +143,15 @@ namespace
 		F10 = 0x79,
 		F11 = 0x7a,
 		F12 = 0x7b,
+	};
+
+	enum SpecialKeyCodes
+	{
+		LeftShift = 0x70, RightShift = 0x71,
+
+		LeftControl = 0x72, RightControl = 0x73,
+
+		LeftAlt = 0x74, RightAlt = 0x75,
 	};
 }
 
@@ -229,10 +249,8 @@ namespace
 	{
 		g_vertexTransformationMatrixID = glGetUniformLocation(g_shaderProgramID,
 				"g_vertexTransform");
-		//assert(g_vertexTransformationMatrixID != 0xFFFFFFFF);
 		g_normalTransformationMatrixID = glGetUniformLocation(g_shaderProgramID,
 				"g_normalTransform");
-		//assert(g_normalTransformationMatrixID != 0xFFFFFFFF);
 		g_modelTransformationMatrixID = glGetUniformLocation(g_shaderProgramID,
 				"g_modelTransformationMatrix");
 
@@ -242,25 +260,15 @@ namespace
 	void BindBlinnShadingParameters()
 	{
 		g_shininessID = glGetUniformLocation(g_shaderProgramID, "g_shininess");
-		//assert(g_shininessID != 0xFFFFFFFF);
 		g_lightSourceID = glGetUniformLocation(g_shaderProgramID,
 				"g_lightSource");
-		//assert(g_lightSourceID != 0xFFFFFFFF);
 		g_viewerID = glGetUniformLocation(g_shaderProgramID, "g_viewer");
-		g_halfwayID = glGetUniformLocation(g_shaderProgramID, "g_halfway");
-		//assert(g_halfwayID != 0xFFFFFFFF);
-		g_ambientLightSourceID = glGetUniformLocation(g_shaderProgramID,
-				"g_ambientLightSource");
-		//assert(g_ambientLightSourceID != 0xFFFFFFFF);
 		g_diffuseColorID = glGetUniformLocation(g_shaderProgramID,
 				"g_diffuseColor");
-		//assert(g_diffuseColorID != 0xFFFFFFFF);
 		g_specularColorID = glGetUniformLocation(g_shaderProgramID,
 				"g_specularColor");
-		//assert(g_specularColorID != 0xFFFFFFFF);
 		g_ambientColorID = glGetUniformLocation(g_shaderProgramID,
 				"g_ambientColor");
-		//assert(g_ambientColorID != 0xFFFFFFFF);
 	}
 
 	// Cleanup
@@ -488,9 +496,11 @@ namespace
 		cy::Matrix4f transformMat = g_projectionTransmationMatrix
 				* g_viewTransformationMatrix * g_modelTransformationMatrix;
 
+		// Bind MVP transformation matrix for shaders to use
 		glUniformMatrix4fv(g_vertexTransformationMatrixID, 1, GL_FALSE,
 				&transformMat.data[0]);
 
+		// Bind model transformation matrix for shaders to use
 		glUniformMatrix4fv(g_modelTransformationMatrixID, 1, GL_FALSE,
 				&g_modelTransformationMatrix.data[0]);
 	}
@@ -510,11 +520,23 @@ namespace
 				&normalTransformMat.data[0]);
 	}
 
+	void ProcessLightTransformation()
+	{
+		g_lightSource = cy::Point3f(g_lightTranslationDistanceX,
+				g_lightTranslationDistanceY, 0.0f)
+				+ gc_initialLightSourceLocation;
+		g_lightSource = cy::Matrix3f::MatrixRotationX(g_lightRotationAmountX)
+				* g_lightSource;
+		g_lightSource = cy::Matrix3f::MatrixRotationY(g_lightRotationAmountY)
+				* g_lightSource;
+	}
+
 	// Calculate transformation matrices
 	void ProcessTransformation()
 	{
 		ProcessVertexTransformation();
 		ProcessNormalTransformation();
+		ProcessLightTransformation();
 	}
 
 	// Calculate and bind parameters for Blinn Shading
@@ -530,8 +552,6 @@ namespace
 		glUniform1f(g_shininessID, g_shininess);
 		glUniform3fv(g_lightSourceID, 1, &g_lightSource[0]);
 		glUniform3fv(g_viewerID, 1, &g_viewer[0]);
-		glUniform3fv(g_halfwayID, 1, &g_halfway[0]);
-		glUniform3fv(g_ambientLightSourceID, 1, &g_ambientLightSource[0]);
 		glUniform3fv(g_diffuseColorID, 1, &g_diffuseColor[0]);
 		glUniform3fv(g_specularColorID, 1, &g_specularColor[0]);
 		glUniform3fv(g_ambientColorID, 1, &g_ambientColor[0]);
@@ -581,9 +601,22 @@ namespace
 	// Handler for functional key press events
 	void ProcessFunctionKeyPress(GLint i_key, GLint i_x, GLint i_y)
 	{
+		// This section is for moving light source with Control keys pressed and held
+		if (i_key == SpecialKeyCodes::LeftControl
+				|| i_key == SpecialKeyCodes::RightControl)
+			g_controlDown = true;
+
 		// This section is for recompiling shaders with F6 key
 		if (i_key == GLUT_KEY_F6)
 			RecompileShaders();
+	}
+
+	void ProcessFunctionKeyRelease(GLint i_key, GLint i_x, GLint i_y)
+	{
+		// This section is for releasing control on light source with Control keys released
+		if (i_key == SpecialKeyCodes::LeftControl
+				|| i_key == SpecialKeyCodes::RightControl)
+			g_controlDown = false;
 	}
 
 	// Handler for mouse button click events
@@ -594,16 +627,22 @@ namespace
 			g_leftMouseButtonDown = true;
 		else
 			g_leftMouseButtonDown = false;
+
 		if (i_button == GLUT_RIGHT_BUTTON && i_state == GLUT_DOWN)
 			g_rightMouseButtonDown = true;
 		else
 			g_rightMouseButtonDown = false;
+
 		// Keep track of mouse position
 		{
 			g_translationDeltaX = i_x;
 			g_translationDeltaY = i_y;
 			g_rotationDeltaX = i_y;
 			g_rotationDeltaZ = i_x;
+			g_lightTranslationDeltaX = i_x;
+			g_lightTranslationDeltaY = i_y;
+			g_lightRotationDeltaX = i_x;
+			g_lightRotationDeltaY = i_y;
 		}
 	}
 
@@ -612,17 +651,50 @@ namespace
 	{
 		if (g_leftMouseButtonDown)
 		{
-			g_rotationAmountX += (g_rotationDeltaX - i_y) * 0.01f;
-			g_rotationAmountZ += (g_rotationDeltaZ - i_x) * 0.01f;
-			g_rotationDeltaX = i_y;
-			g_rotationDeltaZ = i_x;
+			// Object Rotation
+			if (!g_controlDown)
+			{
+				g_rotationAmountX += (g_rotationDeltaX - i_y)
+						* gc_inputControlScaleParameter;
+				g_rotationAmountZ += (g_rotationDeltaZ - i_x)
+						* gc_inputControlScaleParameter;
+				g_rotationDeltaX = i_y;
+				g_rotationDeltaZ = i_x;
+			}
+			// Light Rotation
+			else
+			{
+				g_lightRotationAmountX += (g_lightRotationDeltaX - i_x)
+						* gc_inputControlScaleParameter;
+				g_lightRotationAmountY += (g_lightRotationDeltaY - i_y)
+						* gc_inputControlScaleParameter;
+				g_lightRotationDeltaX = i_x;
+				g_lightRotationDeltaY = i_y;
+
+			}
 		}
 		if (g_rightMouseButtonDown)
 		{
-			g_translationDistance += (g_translationDeltaX - i_x) * 0.01f;
-			g_translationDistance += (g_translationDeltaY - i_y) * 0.01f;
-			g_translationDeltaX = i_x;
-			g_translationDeltaY = i_y;
+			// Object Translation
+			if (!g_controlDown)
+			{
+				g_translationDistance += (g_translationDeltaX - i_x)
+						* gc_inputControlScaleParameter;
+				g_translationDistance += (g_translationDeltaY - i_y)
+						* gc_inputControlScaleParameter;
+				g_translationDeltaX = i_x;
+				g_translationDeltaY = i_y;
+			}
+			// Light Translation
+			else
+			{
+				g_lightTranslationDistanceX += (g_lightTranslationDeltaX - i_x)
+						* gc_inputControlScaleParameter;
+				g_lightTranslationDistanceY += (g_lightTranslationDeltaY - i_y)
+						* gc_inputControlScaleParameter;
+				g_lightTranslationDeltaX = i_x;
+				g_lightTranslationDeltaY = i_y;
+			}
 		}
 	}
 }
@@ -661,6 +733,8 @@ int main(int argc, char** argv)
 	glutKeyboardFunc(ProcessKeyPress); // Register key press callback handler for actions bound to key press
 
 	glutSpecialFunc(ProcessFunctionKeyPress); // Register special key press callback handler for actions bound to special key press
+
+	glutSpecialUpFunc(ProcessFunctionKeyRelease); // Register special key release callback handler for actions bound to special key release
 
 	glutMouseFunc(ProcessMouseButtonPress); // Register mouse button press callback handler for actions bound to mouse buttons
 

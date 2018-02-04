@@ -14,7 +14,6 @@ in vec3 vertex;
 uniform float g_shininess;
 uniform vec3 g_lightSource;
 uniform vec3 g_viewer;
-uniform vec3 g_halfway;
 uniform vec3 g_diffuseColor;
 uniform vec3 g_specularColor;
 uniform vec3 g_ambientColor;
