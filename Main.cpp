@@ -26,7 +26,7 @@
 namespace
 {
 	constexpr auto gc_numberOfVerticesPerTriangle = 3;
-	const auto gc_initialLightSourceLocation = cy::Point3f(0.0f, 5.0f, 10.0f);
+	const auto gc_initialLightSourceLocation = cy::Point3f(0.0f, 0.0f, 10.0f);
 	constexpr auto gc_inputControlScaleParameter = 0.01f;
 }
 
