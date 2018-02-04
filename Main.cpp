@@ -76,17 +76,18 @@ namespace
 
 	GLuint g_vertexTransformationMatrixID; // MVP transformation matrix ID
 	GLuint g_normalTransformationMatrixID; // Normal transformation matrix ID
+	GLuint g_modelTransformationMatrixID; // Model transformation matrix ID
 
 	// Parameters for Blinn Shading
-	cy::Point3f g_lightSource = cy::Point3f(0.0f, 10.0f, 0.0f), g_viewer =
+	cy::Point3f g_lightSource = cy::Point3f(0.0f, 0.0f, 8.0f), g_viewer =
 			g_cameraPosition, g_halfway;
-	cy::Point3f g_diffuseColor = cy::Point3f(1.0f, 0.0f, 0.0f),
-			g_specularColor = cy::Point3f(0.0f, 1.0f, 0.0f), g_ambientColor =
-					cy::Point3f(0.0f, 0.0f, 1.0f);
-	GLfloat g_shininess = 15.0f;
+	cy::Point3f g_diffuseColor = cy::Point3f(1.0f, 0.0f, 1.0f),
+			g_specularColor = cy::Point3f(0.0f, 1.0f, 1.0f), g_ambientColor =
+					cy::Point3f(0.2f, 0.2f, 0.2f);
+	GLfloat g_shininess = 50.0f;
 	cy::Point3f g_ambientLightSource = cy::Point3f(0.0f, 0.0f, 5.0f);
 
-	GLuint g_lightSourceID, g_halfwayID;
+	GLuint g_lightSourceID, g_viewerID, g_halfwayID;
 	GLuint g_diffuseColorID, g_specularColorID, g_ambientColorID;
 	GLuint g_shininessID;
 	GLuint g_ambientLightSourceID;
@@ -232,6 +233,9 @@ namespace
 		g_normalTransformationMatrixID = glGetUniformLocation(g_shaderProgramID,
 				"g_normalTransform");
 		//assert(g_normalTransformationMatrixID != 0xFFFFFFFF);
+		g_modelTransformationMatrixID = glGetUniformLocation(g_shaderProgramID,
+				"g_modelTransformationMatrix");
+
 	}
 
 	// Bind Blinn Shading parameters to uniform variables in shaders
@@ -239,17 +243,23 @@ namespace
 	{
 		g_shininessID = glGetUniformLocation(g_shaderProgramID, "g_shininess");
 		//assert(g_shininessID != 0xFFFFFFFF);
-		g_lightSourceID = glGetUniformLocation(g_shaderProgramID, "g_lightSource");
+		g_lightSourceID = glGetUniformLocation(g_shaderProgramID,
+				"g_lightSource");
 		//assert(g_lightSourceID != 0xFFFFFFFF);
+		g_viewerID = glGetUniformLocation(g_shaderProgramID, "g_viewer");
 		g_halfwayID = glGetUniformLocation(g_shaderProgramID, "g_halfway");
 		//assert(g_halfwayID != 0xFFFFFFFF);
-		g_ambientLightSourceID = glGetUniformLocation(g_shaderProgramID, "g_ambientLightSource");
+		g_ambientLightSourceID = glGetUniformLocation(g_shaderProgramID,
+				"g_ambientLightSource");
 		//assert(g_ambientLightSourceID != 0xFFFFFFFF);
-		g_diffuseColorID = glGetUniformLocation(g_shaderProgramID, "g_diffuseColor");
+		g_diffuseColorID = glGetUniformLocation(g_shaderProgramID,
+				"g_diffuseColor");
 		//assert(g_diffuseColorID != 0xFFFFFFFF);
-		g_specularColorID = glGetUniformLocation(g_shaderProgramID, "g_specularColor");
+		g_specularColorID = glGetUniformLocation(g_shaderProgramID,
+				"g_specularColor");
 		//assert(g_specularColorID != 0xFFFFFFFF);
-		g_ambientColorID = glGetUniformLocation(g_shaderProgramID, "g_ambientColor");
+		g_ambientColorID = glGetUniformLocation(g_shaderProgramID,
+				"g_ambientColor");
 		//assert(g_ambientColorID != 0xFFFFFFFF);
 	}
 
@@ -480,6 +490,9 @@ namespace
 
 		glUniformMatrix4fv(g_vertexTransformationMatrixID, 1, GL_FALSE,
 				&transformMat.data[0]);
+
+		glUniformMatrix4fv(g_modelTransformationMatrixID, 1, GL_FALSE,
+				&g_modelTransformationMatrix.data[0]);
 	}
 
 	// Calculate transformation matrix for normals
@@ -516,6 +529,7 @@ namespace
 		//-----
 		glUniform1f(g_shininessID, g_shininess);
 		glUniform3fv(g_lightSourceID, 1, &g_lightSource[0]);
+		glUniform3fv(g_viewerID, 1, &g_viewer[0]);
 		glUniform3fv(g_halfwayID, 1, &g_halfway[0]);
 		glUniform3fv(g_ambientLightSourceID, 1, &g_ambientLightSource[0]);
 		glUniform3fv(g_diffuseColorID, 1, &g_diffuseColor[0]);
