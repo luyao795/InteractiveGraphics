@@ -29,7 +29,7 @@
   - In the same window, switch to **Build Steps** tab
   - Set configuration to **All configurations**
   - Make sure the command **cp -r ${ProjDirPath}/Assets ${PWD}; cp -r ${ProjDirPath}/Shaders ${PWD}** is in **Post-build steps command** section
-  - This command will copy all files in Assets and Shaders folders from project directory to build directory
+  - This command will copy all files in **Assets** and **Shaders** folders from project directory to build directory
   
 ### 4. Rebuild index for the project
   - In Eclipse, right click on the project from **Project Explorer** panel on the left
