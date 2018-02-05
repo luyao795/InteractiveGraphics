@@ -60,8 +60,8 @@ namespace
 	cy::Point3f g_targetPosition = cy::Point3f(0.0f, 0.0f, 0.0f);
 
 	// Variables for controlling camera rotation in X and Z directions
-	float g_rotationDeltaX, g_rotationDeltaZ = 0.0f;
-	float g_rotationAmountX, g_rotationAmountZ = 0.0f;
+	float g_rotationDeltaX, g_rotationDeltaY = 0.0f;
+	float g_rotationAmountX, g_rotationAmountY = 0.0f;
 
 	// Variables for controlling camera zoom in/out in Z direction
 	float g_translationDeltaX, g_translationDeltaY = 0.0f;
@@ -72,8 +72,8 @@ namespace
 	float g_lightTranslationDistanceX, g_lightTranslationDistanceY = 0.0f;
 
 	// Variables for controlling light rotation in Z direction
-	float g_lightRotationDeltaX, g_lightRotationDeltaY = 0.0f;
-	float g_lightRotationAmountX, g_lightRotationAmountY = 0.0f;
+	float g_lightRotationDeltaY, g_lightRotationDeltaX = 0.0f;
+	float g_lightRotationAmountY, g_lightRotationAmountX = 0.0f;
 
 	// Flags for whether left and right mouse buttons are down
 	bool g_leftMouseButtonDown = false;
@@ -93,7 +93,7 @@ namespace
 
 	// Parameters for Blinn Shading
 	cy::Point3f g_lightSource = gc_initialLightSourceLocation, g_viewer =
-			g_cameraPosition, g_halfway;
+			g_cameraPosition;
 	cy::Point3f g_diffuseColor = cy::Point3f(1.0f, 0.0f, 1.0f),
 			g_specularColor = cy::Point3f(0.0f, 1.0f, 1.0f), g_ambientColor =
 					cy::Point3f(0.2f, 0.2f, 0.2f);
@@ -485,7 +485,7 @@ namespace
 		g_viewTransformationMatrix *= cy::Matrix4f::MatrixRotationX(
 				ToRadian(-90.0f));
 		g_viewTransformationMatrix *= cy::Matrix4f::MatrixRotationZ(
-				g_rotationAmountZ);
+				g_rotationAmountY);
 		g_viewTransformationMatrix *= cy::Matrix4f::MatrixRotationX(
 				g_rotationAmountX);
 		g_viewTransformationMatrix.AddTrans(
@@ -539,16 +539,9 @@ namespace
 		ProcessLightTransformation();
 	}
 
-	// Calculate and bind parameters for Blinn Shading
+	// Bind parameters for Blinn Shading
 	void ProcessBlinnShading()
 	{
-		// Calculation
-		//------------
-		g_halfway = (g_lightSource + g_viewer)
-				/ (g_lightSource + g_viewer).Length();
-
-		// Bind
-		//-----
 		glUniform1f(g_shininessID, g_shininess);
 		glUniform3fv(g_lightSourceID, 1, &g_lightSource[0]);
 		glUniform3fv(g_viewerID, 1, &g_viewer[0]);
@@ -638,11 +631,11 @@ namespace
 			g_translationDeltaX = i_x;
 			g_translationDeltaY = i_y;
 			g_rotationDeltaX = i_y;
-			g_rotationDeltaZ = i_x;
+			g_rotationDeltaY = i_x;
 			g_lightTranslationDeltaX = i_x;
 			g_lightTranslationDeltaY = i_y;
-			g_lightRotationDeltaX = i_x;
-			g_lightRotationDeltaY = i_y;
+			g_lightRotationDeltaY = i_x;
+			g_lightRotationDeltaX = i_y;
 		}
 	}
 
@@ -656,20 +649,20 @@ namespace
 			{
 				g_rotationAmountX += (g_rotationDeltaX - i_y)
 						* gc_inputControlScaleParameter;
-				g_rotationAmountZ += (g_rotationDeltaZ - i_x)
+				g_rotationAmountY += (g_rotationDeltaY - i_x)
 						* gc_inputControlScaleParameter;
 				g_rotationDeltaX = i_y;
-				g_rotationDeltaZ = i_x;
+				g_rotationDeltaY = i_x;
 			}
 			// Light Rotation
 			else
 			{
-				g_lightRotationAmountX += (g_lightRotationDeltaX - i_x)
+				g_lightRotationAmountX += (g_lightRotationDeltaX - i_y)
 						* gc_inputControlScaleParameter;
-				g_lightRotationAmountY += (g_lightRotationDeltaY - i_y)
+				g_lightRotationAmountY += (g_lightRotationDeltaY - i_x)
 						* gc_inputControlScaleParameter;
-				g_lightRotationDeltaX = i_x;
-				g_lightRotationDeltaY = i_y;
+				g_lightRotationDeltaX = i_y;
+				g_lightRotationDeltaY = i_x;
 
 			}
 		}
