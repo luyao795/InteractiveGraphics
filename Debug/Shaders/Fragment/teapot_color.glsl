@@ -31,12 +31,12 @@ out vec4 o_color;
 void main()
 {
 	// Details for reference: https://paroj.github.io/gltut/Illumination/Tut11%20BlinnPhong%20Model.html
-	vec3 vertexPosition = ( g_modelTransformationMatrix * vec4( vertex, 1 ) ).xyz;
+	vec3 vertexPosition = ( g_modelTransformationMatrix * vec4( vertex, 1.0 ) ).xyz;
 	vec3 V = normalize( g_viewer - vertexPosition );
 	vec3 H = normalize( V + normalize( g_lightSource - vertexPosition ) );
 	float HN = dot( H, normalize( ( g_normalTransform * vec4( normal, 1.0 ) ).xyz ) );
-	HN = clamp( HN, 0, 1 );
-	float cosine = clamp(dot( normalize( (g_normalTransform * vec4( normal, 1.0 ) ).xyz ), normalize( g_lightSource - vertexPosition ) ), 0, 1 );
+	HN = clamp( HN, 0.0, 1.0 );
+	float cosine = clamp(dot( normalize( (g_normalTransform * vec4( normal, 1.0 ) ).xyz ), normalize( g_lightSource - vertexPosition ) ), 0.0, 1.0 );
 	HN = cosine != 0.0 ? HN : 0.0;
 	float HN_power = pow( HN, g_shininess );
 	vec3 specular = g_specularColor * HN_power;
