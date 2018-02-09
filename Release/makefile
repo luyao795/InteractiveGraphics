@@ -9,6 +9,7 @@ RM := rm -rf
 # All of the sources participating in the build are defined here
 -include sources.mk
 -include Shaders/Fragment/subdir.mk
+-include LodePNG/subdir.mk
 -include Assets/Meshes/subdir.mk
 -include subdir.mk
 -include objects.mk

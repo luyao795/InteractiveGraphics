@@ -16,6 +16,8 @@
 #include "cyCodeBase/cyTriMesh.h"
 #include "cyCodeBase/cyGL.h"
 #include "cyCodeBase/cyMatrix.h"
+// This library was obtained from http://lodev.org/lodepng/
+#include "LodePNG/lodepng.h"
 // This file was obtained from https://github.com/triplepointfive/ogldev/blob/master/tutorial21/math_3d.h
 #include "math_3d.h"
 
