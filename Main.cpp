@@ -40,6 +40,7 @@ namespace
 	cy::Point3f * g_meshVertexData = nullptr;
 	GLuint * g_meshIndexData = nullptr;
 	cy::Point3f * g_meshNormalData = nullptr;
+	std::vector<GLubyte> g_meshTextureData;
 
 	// Number of vertices, indices and normals in the mesh
 	GLuint g_meshVertexCount, g_meshIndexCount, g_meshNormalCount;
@@ -147,6 +148,17 @@ namespace
 		F12 = 0x7b,
 	};
 
+	enum ErrorCodes
+	{
+		FailedToInitializeGLEW = -1,
+
+		FailedToCompileVertexShader = -2,
+		FailedToCompileFragmentShader = -3,
+
+		FailedToLoadMeshFile = -4,
+		FailedToLoadTextureFile = -5,
+	};
+
 	enum SpecialKeyCodes
 	{
 		LeftShift = 0x70, RightShift = 0x71,
@@ -190,7 +202,7 @@ namespace
 		if (result != GLEW_OK)
 		{
 			fprintf(stderr, "Error: '%s'\n", glewGetErrorString(result));
-			exit(-1); // Either use exit() or return to terminate the program
+			exit(ErrorCodes::FailedToInitializeGLEW); // Either use exit() or return to terminate the program
 		}
 	}
 
@@ -360,7 +372,7 @@ namespace
 		if (!result)
 		{
 			fprintf(stderr, "Cannot compile vertex shader.\n");
-			exit(-1);
+			exit(ErrorCodes::FailedToCompileVertexShader);
 		}
 		g_vertexShaderID = g_vertexShader->GetID();
 		g_shaderProgram->AttachShader(g_vertexShaderID);
@@ -369,7 +381,7 @@ namespace
 		if (!result)
 		{
 			fprintf(stderr, "Cannot compile fragment shader.\n");
-			exit(-1);
+			exit(ErrorCodes::FailedToCompileFragmentShader);
 		}
 		g_fragmentShaderID = g_fragmentShader->GetID();
 		g_shaderProgram->Build(g_vertexShader, g_fragmentShader);
@@ -411,8 +423,20 @@ namespace
 		bool isFileLoaded = g_mesh->LoadFromFileObj(i_filename);
 		if (!isFileLoaded)
 		{
-			fprintf(stderr, "Cannot open specified file.\n");
-			exit(-1);
+			fprintf(stderr, "Cannot load specified mesh file.\n");
+			exit(ErrorCodes::FailedToLoadMeshFile);
+		}
+	}
+
+	void LoadPNGFileAsTexture(const char * i_filename)
+	{
+		GLuint width, height;
+		GLuint loadWithError = lodepng::decode(g_meshTextureData, width, height,
+				i_filename);
+		if (loadWithError)
+		{
+			fprintf(stderr, "%s\n", lodepng_error_text(loadWithError));
+			exit(ErrorCodes::FailedToLoadTextureFile);
 		}
 	}
 
@@ -709,9 +733,19 @@ int main(int argc, char** argv)
 #endif
 )	; // Create an OpenGL window with specified size, position and title
 
-	LoadMeshFileWithName(argv[1]); // Pass in the filename as first command line argument
-								   // Note that argv[0] is the name of the program itself
-								   // and therefore the first command line argument is argv[1]
+	(argc > 1) ?
+			LoadMeshFileWithName(argv[1]) :
+			LoadMeshFileWithName("Assets/Meshes/teapot.obj");
+	// Pass in the mesh filename as first command line argument
+	// Note that argv[0] is the name of the program itself
+	// and therefore the first command line argument is argv[1]
+
+	(argc > 2) ?
+			LoadPNGFileAsTexture(argv[2]) :
+			LoadPNGFileAsTexture("Assets/Textures/teapot.mtl");
+	// Pass in the texture filename as second command line argument
+	// Note that argv[0] is the name of the program itself
+	// and therefore the second command line argument is argv[2]
 
 	InitializeGLEW(); // Initialize GLEW library
 
