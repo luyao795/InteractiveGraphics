@@ -251,9 +251,9 @@ namespace
 	{
 		glGenTextures(1, &g_textureObject);
 		glBindTexture(GL_TEXTURE_2D, g_textureObject);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, g_textureWidth, g_textureHeight,
 				0, GL_RGB, GL_UNSIGNED_BYTE, i_meshTextureData.data());
 		glGenerateMipmap(GL_TEXTURE_2D);
@@ -264,7 +264,8 @@ namespace
 
 	// Initialize buffers needed for the program
 	void GenerateAndBindBuffers(cy::Point3f * i_meshVertexData,
-			GLuint * i_meshIndexData, cy::Point3f * i_meshNormalData)
+			GLuint * i_meshIndexData, cy::Point3f * i_meshNormalData,
+			std::vector<GLubyte> i_meshTextureData)
 	{
 		// General steps are provided by http://www.swiftless.com/tutorials/opengl4/4-opengl-4-vao.html
 		glGenVertexArrays(1, &g_vertexArrayObject); // Generate Vertex Array Object
@@ -272,7 +273,7 @@ namespace
 		GenerateAndBindVertexBuffer(i_meshVertexData);
 		GenerateAndBindIndexBuffer(i_meshIndexData);
 		GenerateAndBindNormalBuffer(i_meshNormalData);
-		GenerateAndBindTextureObject(g_meshTextureData);
+		GenerateAndBindTextureObject(i_meshTextureData);
 		glBindVertexArray(0); // Unbind Vertex Array Object
 	}
 
@@ -779,7 +780,8 @@ int main(int argc, char** argv)
 
 	CompileAndBindShaders("teapot_vertex.glsl", "teapot_color.glsl"); // Compile and bind shaders to the program
 
-	GenerateAndBindBuffers(g_meshVertexData, g_meshIndexData, g_meshNormalData); // Creation and using Vertex Array Object and Vertex Buffer Object
+	GenerateAndBindBuffers(g_meshVertexData, g_meshIndexData, g_meshNormalData,
+			g_meshTextureData); // Generate and bind buffers and objects
 
 	glutDisplayFunc(DisplayContent); // Register display callback handler for window re-paint
 

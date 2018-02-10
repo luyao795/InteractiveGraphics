@@ -48,7 +48,7 @@ void main()
 	vec3 specular = g_specularColor * HN_power;
 	vec3 diffuse = g_diffuseColor * cosine;
 	vec3 ambient = g_ambientColor;
-	//o_color = vec4( diffuse + ambient + specular, 1.0 );
+	o_color = vec4( diffuse + ambient + specular, 1.0 );
 	//o_color = normalize( i_color );
-	o_color = texture( tex, texcoord ) * color;
+	o_color = texture( tex, texcoord ) * o_color;
 }
