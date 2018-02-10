@@ -40,7 +40,9 @@ namespace
 	cy::Point3f * g_meshVertexData = nullptr;
 	GLuint * g_meshIndexData = nullptr;
 	cy::Point3f * g_meshNormalData = nullptr;
+
 	std::vector<GLubyte> g_meshTextureData;
+	GLuint g_textureWidth, g_textureHeight;
 
 	// Number of vertices, indices and normals in the mesh
 	GLuint g_meshVertexCount, g_meshIndexCount, g_meshNormalCount;
@@ -48,6 +50,8 @@ namespace
 	// Vertex Array Object, Vertex Buffer Object, Index Buffer Object and Normal Buffer Object
 	GLuint g_vertexArrayObject, g_vertexBufferObject, g_indexBufferObject,
 			g_normalBufferObject;
+
+	GLuint g_textureObject;
 
 	GLuint g_shaderProgramID;
 	GLuint g_vertexShaderID, g_fragmentShaderID;
@@ -152,11 +156,9 @@ namespace
 	{
 		FailedToInitializeGLEW = -1,
 
-		FailedToCompileVertexShader = -2,
-		FailedToCompileFragmentShader = -3,
+		FailedToCompileVertexShader = -2, FailedToCompileFragmentShader = -3,
 
-		FailedToLoadMeshFile = -4,
-		FailedToLoadTextureFile = -5,
+		FailedToLoadMeshFile = -4, FailedToLoadTextureFile = -5,
 	};
 
 	enum SpecialKeyCodes
@@ -245,6 +247,21 @@ namespace
 		glEnableVertexAttribArray(1); // Enable Normal Buffer Object
 	}
 
+	void GenerateAndBindTextureObject(std::vector<GLubyte> i_meshTextureData)
+	{
+		glGenTextures(1, &g_textureObject);
+		glBindTexture(GL_TEXTURE_2D, g_textureObject);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_REPEAT);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, g_textureWidth, g_textureHeight,
+				0, GL_RGB, GL_UNSIGNED_BYTE, i_meshTextureData.data());
+		glGenerateMipmap(GL_TEXTURE_2D);
+		GLint texAttrib = glGetAttribLocation(g_shaderProgramID, "i_texcoord");
+		glEnableVertexAttribArray(texAttrib);
+		glVertexAttribPointer(texAttrib, 2, GL_FLOAT, GL_FALSE, 0, 0);
+	}
+
 	// Initialize buffers needed for the program
 	void GenerateAndBindBuffers(cy::Point3f * i_meshVertexData,
 			GLuint * i_meshIndexData, cy::Point3f * i_meshNormalData)
@@ -255,6 +272,7 @@ namespace
 		GenerateAndBindVertexBuffer(i_meshVertexData);
 		GenerateAndBindIndexBuffer(i_meshIndexData);
 		GenerateAndBindNormalBuffer(i_meshNormalData);
+		GenerateAndBindTextureObject(g_meshTextureData);
 		glBindVertexArray(0); // Unbind Vertex Array Object
 	}
 
@@ -313,6 +331,14 @@ namespace
 		}
 	}
 
+	// Clear texture data and info
+	void UnloadTextureData()
+	{
+		g_meshTextureData.clear();
+		g_textureWidth = 0;
+		g_textureHeight = 0;
+	}
+
 	// Unload shaders being used by the program
 	void UnloadShaderHandler()
 	{
@@ -353,9 +379,10 @@ namespace
 	// Final cleanup function
 	void CleanUp()
 	{
-		UnloadMeshFile();
-		CleanUpShaders();
-		CleanUpBuffers(); // Clean Up Vertex Buffer and Array Objects
+		UnloadMeshFile(); // Clean up mesh data
+		UnloadTextureData(); // Cleab up texture data
+		CleanUpShaders(); // Clean up shader data
+		CleanUpBuffers(); // Clean up buffer data
 	}
 }
 
@@ -423,19 +450,18 @@ namespace
 		bool isFileLoaded = g_mesh->LoadFromFileObj(i_filename);
 		if (!isFileLoaded)
 		{
-			fprintf(stderr, "Cannot load specified mesh file.\n");
+			fprintf(stderr, "Error: Cannot load specified mesh file.\n");
 			exit(ErrorCodes::FailedToLoadMeshFile);
 		}
 	}
 
 	void LoadPNGFileAsTexture(const char * i_filename)
 	{
-		GLuint width, height;
-		GLuint loadWithError = lodepng::decode(g_meshTextureData, width, height,
-				i_filename);
+		GLuint loadWithError = lodepng::decode(g_meshTextureData,
+				g_textureWidth, g_textureHeight, i_filename);
 		if (loadWithError)
 		{
-			fprintf(stderr, "%s\n", lodepng_error_text(loadWithError));
+			fprintf(stderr, "Error: %s\n", lodepng_error_text(loadWithError));
 			exit(ErrorCodes::FailedToLoadTextureFile);
 		}
 	}
@@ -742,7 +768,7 @@ int main(int argc, char** argv)
 
 	(argc > 2) ?
 			LoadPNGFileAsTexture(argv[2]) :
-			LoadPNGFileAsTexture("Assets/Textures/teapot.mtl");
+			LoadPNGFileAsTexture("Assets/Textures/Shibe.png");
 	// Pass in the texture filename as second command line argument
 	// Note that argv[0] is the name of the program itself
 	// and therefore the second command line argument is argv[2]
