@@ -52,3 +52,6 @@
 ### 2. Light manipulation
   - In order to rotate the light, hold down left mouse button and Control key and move the mouse
   - In order to move the light, hold down roght mouse button and Control key and move the mouse
+  
+### 3. Shader manipulation
+  - In order to recompile shaders at runtime, make modifications to shaders first and then switch back to main window and press F6, new effects should be visible instantly, if the modifications are valid
