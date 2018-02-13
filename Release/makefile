@@ -10,6 +10,8 @@ RM := rm -rf
 -include sources.mk
 -include Shaders/Fragment/subdir.mk
 -include LodePNG/subdir.mk
+-include Assets/Meshes/yoda/subdir.mk
+-include Assets/Meshes/teapot/subdir.mk
 -include Assets/Meshes/subdir.mk
 -include subdir.mk
 -include objects.mk

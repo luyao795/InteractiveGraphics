@@ -8,8 +8,7 @@
 
 layout ( location = 0 ) in vec3 i_position;
 layout ( location = 1 ) in vec3 i_normal;
-
-in vec2 i_texcoord;
+layout ( location = 2 ) in vec2 i_texcoord;
 
 // Output
 //=======

@@ -30,6 +30,8 @@ namespace
 	constexpr auto gc_numberOfVerticesPerTriangle = 3;
 	const auto gc_initialLightSourceLocation = cy::Point3f(0.0f, 0.0f, 10.0f);
 	constexpr auto gc_inputControlScaleParameter = 0.01f;
+	const char * gc_defaultMeshFile = "Assets/Meshes/teapot/teapot.obj";
+	const std::string gc_meshFilePath = "Assets/Meshes/";
 }
 
 // Gloabl Variables
@@ -38,26 +40,32 @@ namespace
 {
 	cy::TriMesh * g_mesh = nullptr;
 	cy::Point3f * g_meshVertexData = nullptr;
-	GLuint * g_meshIndexData = nullptr;
 	cy::Point3f * g_meshNormalData = nullptr;
+	cy::Point2f * g_meshTexcoordData = nullptr;
 
-	std::vector<GLubyte> g_meshTextureData;
 	GLuint g_textureWidth, g_textureHeight;
 
-	// Number of vertices, indices and normals in the mesh
-	GLuint g_meshVertexCount, g_meshIndexCount, g_meshNormalCount;
+	// Number of vertices, normals and texcoords in the mesh
+	GLuint g_meshVertexCount, g_meshNormalCount, g_meshTexcoordCount;
 
-	// Vertex Array Object, Vertex Buffer Object, Index Buffer Object and Normal Buffer Object
+	// Vertex Array Object, Vertex Buffer Object, Normal Buffer Object and Texture Buffer Object
 	GLuint g_vertexArrayObject, g_vertexBufferObject, g_indexBufferObject,
-			g_normalBufferObject;
+			g_normalBufferObject, g_textureBufferObject;
 
-	GLuint g_textureObject;
+	GLuint g_diffuseTexture, g_specularTexture, g_ambientTexture;
 
 	GLuint g_shaderProgramID;
 	GLuint g_vertexShaderID, g_fragmentShaderID;
 
 	char g_vertexShaderPath[FILE_PATH_BUFFER_SIZE] = "Shaders/Vertex/";
 	char g_fragmentShaderPath[FILE_PATH_BUFFER_SIZE] = "Shaders/Fragment/";
+	char * g_diffuseTextureFilename;
+	char * g_specularTextureFilename;
+	char * g_ambientTextureFilename;
+	std::string g_diffuseTexturePath;
+	std::string g_specularTexturePath;
+	std::string g_ambientTexturePath;
+	std::string g_subdirectory = "teapot/";
 
 	cy::GLSLShader * g_vertexShader = nullptr;
 	cy::GLSLShader * g_fragmentShader = nullptr;
@@ -175,9 +183,35 @@ namespace
 //=======================
 namespace
 {
+	// Declaration
+	//============
 	// Initialization
 	//---------------
+	void SetupGLUTContextEnvironment(int OpenGLMajorVersion,
+			int OpenGLMinorVersion, int OpenGLProfile);
+	void CreateWindowWithSpecifiedSizePositionTitle(int i_sizeX, int i_sizeY,
+			int i_posX, int i_posY, const char * i_windowTitle);
+	void InitializeGLEW();
+	void GenerateVertexNormals();
+	void GenerateAndBindVertexBuffer(cy::Point3f * i_meshVertexData);
+	void GenerateAndBindNormalBuffer(cy::Point3f * i_meshNormalData);
+	void GenerateAndBindTextureBuffer(cy::Point2f * i_meshTextureData);
+	void GenerateAndBindBuffers(cy::Point3f * i_meshVertexData,
+			cy::Point3f * i_meshNormalData, cy::Point2f * i_meshTextureData);
+	void BindTransformations();
+	void BindBlinnShadingParameters();
+	// Cleanup
+	//--------
+	void UnloadMeshFile();
+	void UnloadTextureData();
+	void UnloadShaderHandler();
+	void CleanUpShaders();
+	void CleanUp();
 
+	// Definition
+	//===========
+	// Initialization
+	//---------------
 	// Set the specific OpenGL version and profile to be used by this program
 	void SetupGLUTContextEnvironment(int OpenGLMajorVersion,
 			int OpenGLMinorVersion, int OpenGLProfile)
@@ -227,15 +261,7 @@ namespace
 		glEnableVertexAttribArray(0); // Enable Vertex Buffer Object
 	}
 
-	// Initialize index buffer
-	void GenerateAndBindIndexBuffer(GLuint * i_meshIndexData)
-	{
-		glGenBuffers(1, &g_indexBufferObject); // Generate Index Buffer Object
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, g_indexBufferObject); // Bind Index Buffer Object so it's ready to use
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint) * g_meshIndexCount,
-				i_meshIndexData, GL_STATIC_DRAW); // Send drawing data to Index Buffer Object
-	}
-
+	// Initialize normal buffer
 	void GenerateAndBindNormalBuffer(cy::Point3f * i_meshNormalData)
 	{
 		glGenBuffers(1, &g_normalBufferObject);
@@ -247,33 +273,27 @@ namespace
 		glEnableVertexAttribArray(1); // Enable Normal Buffer Object
 	}
 
-	void GenerateAndBindTextureObject(std::vector<GLubyte> i_meshTextureData)
+	// Initialize texture buffer
+	void GenerateAndBindTextureBuffer(cy::Point2f * i_meshTextureData)
 	{
-		glGenTextures(1, &g_textureObject);
-		glBindTexture(GL_TEXTURE_2D, g_textureObject);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, g_textureWidth, g_textureHeight,
-				0, GL_RGB, GL_UNSIGNED_BYTE, i_meshTextureData.data());
-		glGenerateMipmap(GL_TEXTURE_2D);
-		GLint texAttrib = glGetAttribLocation(g_shaderProgramID, "i_texcoord");
-		glEnableVertexAttribArray(texAttrib);
-		glVertexAttribPointer(texAttrib, 2, GL_FLOAT, GL_FALSE, 0, 0);
+		glGenBuffers(1, &g_textureBufferObject);
+		glBindBuffer(GL_ARRAY_BUFFER, g_textureBufferObject);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(cy::Point2f) * g_meshTexcoordCount,
+				i_meshTextureData, GL_STATIC_DRAW);
+		glEnableVertexAttribArray(2);
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, 0);
 	}
 
 	// Initialize buffers needed for the program
 	void GenerateAndBindBuffers(cy::Point3f * i_meshVertexData,
-			GLuint * i_meshIndexData, cy::Point3f * i_meshNormalData,
-			std::vector<GLubyte> i_meshTextureData)
+			cy::Point3f * i_meshNormalData, cy::Point2f * i_meshTextureData)
 	{
 		// General steps are provided by http://www.swiftless.com/tutorials/opengl4/4-opengl-4-vao.html
 		glGenVertexArrays(1, &g_vertexArrayObject); // Generate Vertex Array Object
 		glBindVertexArray(g_vertexArrayObject); // Bind Vertex Array Object so it's ready to use
 		GenerateAndBindVertexBuffer(i_meshVertexData);
-		GenerateAndBindIndexBuffer(i_meshIndexData);
 		GenerateAndBindNormalBuffer(i_meshNormalData);
-		GenerateAndBindTextureObject(i_meshTextureData);
+		GenerateAndBindTextureBuffer(i_meshTextureData);
 		glBindVertexArray(0); // Unbind Vertex Array Object
 	}
 
@@ -285,8 +305,7 @@ namespace
 		g_normalTransformationMatrixID = glGetUniformLocation(g_shaderProgramID,
 				"g_normalTransform");
 		g_modelTransformationMatrixID = glGetUniformLocation(g_shaderProgramID,
-				"g_modelTransformationMatrix");
-
+				"g_modelTransform");
 	}
 
 	// Bind Blinn Shading parameters to uniform variables in shaders
@@ -306,7 +325,6 @@ namespace
 
 	// Cleanup
 	//--------
-
 	// Release memory being used by storing mesh data
 	void UnloadMeshFile()
 	{
@@ -315,15 +333,15 @@ namespace
 			delete[] g_meshVertexData;
 			g_meshVertexData = nullptr;
 		}
-		if (g_meshIndexData)
-		{
-			delete[] g_meshIndexData;
-			g_meshIndexData = nullptr;
-		}
 		if (g_meshNormalData)
 		{
 			delete[] g_meshNormalData;
 			g_meshNormalData = nullptr;
+		}
+		if (g_meshTexcoordData)
+		{
+			delete[] g_meshTexcoordData;
+			g_meshTexcoordData = nullptr;
 		}
 		if (g_mesh)
 		{
@@ -335,7 +353,6 @@ namespace
 	// Clear texture data and info
 	void UnloadTextureData()
 	{
-		g_meshTextureData.clear();
 		g_textureWidth = 0;
 		g_textureHeight = 0;
 	}
@@ -374,6 +391,7 @@ namespace
 		glDeleteBuffers(1, &g_vertexBufferObject);
 		glDeleteBuffers(1, &g_indexBufferObject);
 		glDeleteBuffers(1, &g_normalBufferObject);
+		glDeleteBuffers(1, &g_textureBufferObject);
 		glDeleteVertexArrays(1, &g_vertexArrayObject);
 	}
 
@@ -391,6 +409,16 @@ namespace
 //============
 namespace
 {
+	// Declaration
+	//============
+	void CompileShaders(const char * i_vertexShaderPath,
+			const char * i_fragmentShaderPath);
+	void CompileAndBindShaders(const char * i_vertexShaderFileName,
+			const char * i_fragmentShaderFileName);
+	void RecompileShaders();
+
+	// Definition
+	//===========
 	// Compile shaders with given file paths
 	void CompileShaders(const char * i_vertexShaderPath,
 			const char * i_fragmentShaderPath)
@@ -444,6 +472,28 @@ namespace
 //===============
 namespace
 {
+	// Declaration
+	//============
+	void LoadMeshFileWithName(const char * i_filename);
+	void LoadPNGFileAsTexture(std::string i_filepath,
+			std::vector<GLubyte> &o_meshTextureData, GLuint &o_textureWidth,
+			GLuint &o_textureHeight);
+	void ProcessVertexData();
+	void ProcessNormalData();
+	void ProcessTextureData();
+	void ProcessMeshData();
+	void ProcessVertexTransformation();
+	void ProcessNormalTransformation();
+	void ProcessLightTransformation();
+	void ProcessTransformation();
+	void ProcessBlinnShading();
+	void GenerateAndBindTextures();
+	void DrawGeometry();
+	void DisplayContent();
+	void Idle();
+
+	// Definition
+	//===========
 	// Load mesh file with given filename into memory
 	void LoadMeshFileWithName(const char * i_filename)
 	{
@@ -456,10 +506,13 @@ namespace
 		}
 	}
 
-	void LoadPNGFileAsTexture(const char * i_filename)
+	// Load PNG files as textures
+	void LoadPNGFileAsTexture(std::string i_filepath,
+			std::vector<GLubyte> &o_meshTextureData, GLuint &o_textureWidth,
+			GLuint &o_textureHeight)
 	{
-		GLuint loadWithError = lodepng::decode(g_meshTextureData,
-				g_textureWidth, g_textureHeight, i_filename);
+		GLuint loadWithError = lodepng::decode(o_meshTextureData,
+				o_textureWidth, o_textureHeight, i_filepath);
 		if (loadWithError)
 		{
 			fprintf(stderr, "Error: %s\n", lodepng_error_text(loadWithError));
@@ -470,59 +523,81 @@ namespace
 	// Store vertex data into memory
 	void ProcessVertexData()
 	{
-		const auto vertexCount = g_mesh->NV();
+		const auto triangleCount = g_mesh->NF();
+		const auto vertexCount = triangleCount * gc_numberOfVerticesPerTriangle;
 		g_meshVertexCount = vertexCount;
 		g_meshVertexData = new cy::Point3f[g_meshVertexCount];
-		for (size_t i = 0; i < vertexCount; i++)
-		{
-			g_meshVertexData[i].x = g_mesh->V(i).x;
-			g_meshVertexData[i].y = g_mesh->V(i).y;
-			g_meshVertexData[i].z = g_mesh->V(i).z;
-		}
-	}
-
-	// Store index data into memory
-	void ProcessIndexData()
-	{
-		const auto triangleCount = g_mesh->NF();
-		const auto indexCount = triangleCount * gc_numberOfVerticesPerTriangle;
-		g_meshIndexCount = indexCount;
-		g_meshIndexData = new GLuint[g_meshIndexCount];
 		for (size_t currentTriangleIndex = 0;
 				currentTriangleIndex < triangleCount; currentTriangleIndex++)
 		{
-			for (size_t currentIndexInTriangle = 0;
-					currentIndexInTriangle < gc_numberOfVerticesPerTriangle;
-					currentIndexInTriangle++)
+			for (size_t currentIndexInThisTriangle = 0;
+					currentIndexInThisTriangle < gc_numberOfVerticesPerTriangle;
+					currentIndexInThisTriangle++)
 			{
-				g_meshIndexData[currentTriangleIndex
+				g_meshVertexData[currentTriangleIndex
 						* gc_numberOfVerticesPerTriangle
-						+ currentIndexInTriangle] = g_mesh->F(
-						currentTriangleIndex).v[currentIndexInTriangle];
+						+ currentIndexInThisTriangle] =
+						g_mesh->V(
+								g_mesh->F(currentTriangleIndex).v[currentIndexInThisTriangle]);
 			}
 		}
 	}
 
+	// Store normal data into memory
 	void ProcessNormalData()
 	{
 		GenerateVertexNormals();
-		const auto normalCount = g_mesh->NVN();
+		const auto triangleCount = g_mesh->NF();
+		const auto normalCount = triangleCount * gc_numberOfVerticesPerTriangle;
 		g_meshNormalCount = normalCount;
 		g_meshNormalData = new cy::Point3f[g_meshNormalCount];
-		for (size_t i = 0; i < normalCount; i++)
+		for (size_t currentTriangleIndex = 0;
+				currentTriangleIndex < triangleCount; currentTriangleIndex++)
 		{
-			g_meshNormalData[i].x = g_mesh->VN(i).x;
-			g_meshNormalData[i].y = g_mesh->VN(i).y;
-			g_meshNormalData[i].z = g_mesh->VN(i).z;
+			for (size_t currentIndexInThisTriangle = 0;
+					currentIndexInThisTriangle < gc_numberOfVerticesPerTriangle;
+					currentIndexInThisTriangle++)
+			{
+				g_meshNormalData[currentTriangleIndex
+						* gc_numberOfVerticesPerTriangle
+						+ currentIndexInThisTriangle] =
+						g_mesh->VN(
+								g_mesh->FN(currentTriangleIndex).v[currentIndexInThisTriangle]);
+			}
+		}
+	}
+
+	//Store texture data into memory
+	void ProcessTextureData()
+	{
+		const auto triangleCount = g_mesh->NF();
+		const auto texcoordCount = triangleCount
+				* gc_numberOfVerticesPerTriangle;
+		g_meshTexcoordCount = texcoordCount;
+		g_meshTexcoordData = new cy::Point2f[g_meshTexcoordCount];
+		for (size_t currentTriangleIndex = 0;
+				currentTriangleIndex < triangleCount; currentTriangleIndex++)
+		{
+			for (size_t currentIndexInThisTriangle = 0;
+					currentIndexInThisTriangle < gc_numberOfVerticesPerTriangle;
+					currentIndexInThisTriangle++)
+			{
+				g_meshTexcoordData[currentTriangleIndex
+						* gc_numberOfVerticesPerTriangle
+						+ currentIndexInThisTriangle] =
+						g_mesh->VT(
+								g_mesh->FT(currentTriangleIndex).v[currentIndexInThisTriangle]).XY();
+			}
 		}
 	}
 
 	// Store mesh related data into memory
 	void ProcessMeshData()
 	{
-		ProcessVertexData(); // Store vertex data into memory
-		ProcessIndexData(); // Store index data into memory
-		ProcessNormalData(); // Store normal data into memory
+		ProcessVertexData(); 	// Store vertex data into memory
+		ProcessNormalData(); 	// Store normal data into memory
+		ProcessTextureData();	// Store related texture data into memory
+		GenerateAndBindTextures(); // Generate and bind actual texture data
 	}
 
 	void ProcessVertexTransformation()
@@ -603,11 +678,80 @@ namespace
 		glUniform3fv(g_ambientColorID, 1, &g_ambientColor[0]);
 	}
 
+	void GenerateAndBindTextures()
+	{
+		cy::TriMesh::Mtl material = g_mesh->M(0);
+		g_diffuseTextureFilename = material.map_Kd.data;
+		g_specularTextureFilename = material.map_Ks.data;
+		g_ambientTextureFilename = material.map_Ka.data;
+
+		// Obtain the actual file path for diffuse texture file
+		g_diffuseTexturePath += gc_meshFilePath;
+		g_diffuseTexturePath += g_subdirectory;
+		g_diffuseTexturePath += g_diffuseTextureFilename;
+
+		// Obtain the actual file path for specular texture file
+		g_specularTexturePath += gc_meshFilePath;
+		g_specularTexturePath += g_subdirectory;
+		g_specularTexturePath += g_specularTextureFilename;
+
+		// Obtain the actual file path for ambient texture file
+		g_ambientTexturePath += gc_meshFilePath;
+		g_ambientTexturePath += g_subdirectory;
+		g_ambientTexturePath += g_ambientTextureFilename;
+
+		std::vector<GLubyte> meshTextureData;
+		GLuint textureWidth, textureHeight;
+
+		// Diffuse texture binding
+		LoadPNGFileAsTexture(g_diffuseTexturePath, meshTextureData,
+				textureWidth, textureHeight);
+		glGenTextures(1, &g_diffuseTexture);
+		glBindTexture(GL_TEXTURE_2D, g_diffuseTexture);
+		glEnable(GL_TEXTURE_2D);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, textureWidth, textureHeight, 0,
+		GL_RGBA, GL_UNSIGNED_BYTE, meshTextureData.data());
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glGenerateMipmap(GL_TEXTURE_2D);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, g_diffuseTexture);
+
+		// Specular texture binding
+		LoadPNGFileAsTexture(g_specularTexturePath, meshTextureData,
+				textureWidth, textureHeight);
+		glGenTextures(1, &g_specularTexture);
+		glBindTexture(GL_TEXTURE_2D, g_specularTexture);
+		glEnable(GL_TEXTURE_2D);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, textureWidth, textureHeight, 0,
+		GL_RGBA, GL_UNSIGNED_BYTE, meshTextureData.data());
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glGenerateMipmap(GL_TEXTURE_2D);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, g_specularTexture);
+
+		// Ambient texture binding
+		LoadPNGFileAsTexture(g_ambientTexturePath, meshTextureData,
+				textureWidth, textureHeight);
+		glGenTextures(1, &g_ambientTexture);
+		glBindTexture(GL_TEXTURE_2D, g_ambientTexture);
+		glEnable(GL_TEXTURE_2D);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, textureWidth, textureHeight, 0,
+		GL_RGBA, GL_UNSIGNED_BYTE, meshTextureData.data());
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glGenerateMipmap(GL_TEXTURE_2D);
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, g_ambientTexture);
+	}
+
 	// Render geometries onto screen
 	void DrawGeometry()
 	{
 		glBindVertexArray(g_vertexArrayObject); // Bind Vertex Array Object so it's ready to use
-		glDrawElements(GL_TRIANGLES, g_meshIndexCount, GL_UNSIGNED_INT, 0); // Draw elements using index buffer
+		//glDrawElements(GL_TRIANGLES, g_meshIndexCount, GL_UNSIGNED_INT, 0); // Draw elements using index buffer
+		glDrawArrays(GL_TRIANGLES, 0, g_meshVertexCount);
 		glBindVertexArray(0); // Disable Vertex Array Object
 	}
 
@@ -633,6 +777,17 @@ namespace
 //===============
 namespace
 {
+	// Declaration
+	//============
+	void ProcessKeyPress(GLubyte i_key, GLint i_x, GLint i_y);
+	void ProcessFunctionKeyPress(GLint i_key, GLint i_x, GLint i_y);
+	void ProcessFunctionKeyRelease(GLint i_key, GLint i_x, GLint i_y);
+	void ProcessMouseButtonPress(GLint i_button, GLint i_state, GLint i_x,
+			GLint i_y);
+	void ProcessMouseDragMovement(GLint i_x, GLint i_y);
+
+	// Definition
+	//===========
 	// Handler for regular key press events
 	void ProcessKeyPress(GLubyte i_key, GLint i_x, GLint i_y)
 	{
@@ -716,7 +871,6 @@ namespace
 						* gc_inputControlScaleParameter;
 				g_lightRotationDeltaX = i_y;
 				g_lightRotationDeltaY = i_x;
-
 			}
 		}
 		if (g_rightMouseButtonDown)
@@ -760,19 +914,10 @@ int main(int argc, char** argv)
 #endif
 )	; // Create an OpenGL window with specified size, position and title
 
-	(argc > 1) ?
-			LoadMeshFileWithName(argv[1]) :
-			LoadMeshFileWithName("Assets/Meshes/teapot.obj");
+	LoadMeshFileWithName((argc > 1) ? argv[1] : gc_defaultMeshFile);
 	// Pass in the mesh filename as first command line argument
 	// Note that argv[0] is the name of the program itself
 	// and therefore the first command line argument is argv[1]
-
-	(argc > 2) ?
-			LoadPNGFileAsTexture(argv[2]) :
-			LoadPNGFileAsTexture("Assets/Textures/Shibe.png");
-	// Pass in the texture filename as second command line argument
-	// Note that argv[0] is the name of the program itself
-	// and therefore the second command line argument is argv[2]
 
 	InitializeGLEW(); // Initialize GLEW library
 
@@ -780,8 +925,8 @@ int main(int argc, char** argv)
 
 	CompileAndBindShaders("teapot_vertex.glsl", "teapot_color.glsl"); // Compile and bind shaders to the program
 
-	GenerateAndBindBuffers(g_meshVertexData, g_meshIndexData, g_meshNormalData,
-			g_meshTextureData); // Generate and bind buffers and objects
+	GenerateAndBindBuffers(g_meshVertexData, g_meshNormalData,
+			g_meshTexcoordData); // Generate and bind buffers and objects
 
 	glutDisplayFunc(DisplayContent); // Register display callback handler for window re-paint
 
