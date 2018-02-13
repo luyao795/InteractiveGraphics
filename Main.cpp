@@ -2,7 +2,6 @@
  * Main.cpp
  *
  *  Created on: Jan 18, 2018
- *  Modified on: Jan 26, 2018
  *      Author: Luyao Tian
  */
 
