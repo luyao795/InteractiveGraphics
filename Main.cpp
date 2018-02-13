@@ -944,5 +944,5 @@ int main(int argc, char** argv)
 
 	glutMainLoop();	// Enter the infinitely event-processing loop
 
-	return 0;
+	return Success;
 }
