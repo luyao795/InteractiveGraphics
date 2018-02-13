@@ -43,3 +43,15 @@
   - In Eclipse, right click on the project from **Project Explorer** panel on the left
   - Select **Index→Rebuild**
   - This should resolve all incompatibility issues
+  
+## Initial Control
+### 1. Object manipulation
+  - In order to rotate the project, hold down left mouse button and move the mouse
+  - In order to zoom in or out, hold down right mouse button and move the mouse
+
+### 2. Light manipulation
+  - In order to rotate the light, hold down left mouse button and Control key and move the mouse
+  - In order to move the light, hold down roght mouse button and Control key and move the mouse
+  
+### 3. Shader manipulation
+  - In order to recompile shaders at runtime, make modifications to shaders first and then switch back to main window and press F6, new effects should be visible instantly, if the modifications are valid
