@@ -108,9 +108,7 @@ namespace
 	// Parameters for Blinn Shading
 	cy::Point3f g_lightSource = gc_initialLightSourceLocation, g_viewer =
 			g_cameraPosition;
-	cy::Point3f g_diffuseColor = cy::Point3f(1.0f, 0.0f, 1.0f),
-			g_specularColor = cy::Point3f(0.0f, 1.0f, 1.0f), g_ambientColor =
-					cy::Point3f(0.2f, 0.2f, 0.2f);
+	cy::Point3f g_diffuseColor,	g_specularColor, g_ambientColor;
 	GLfloat g_shininess = 50.0f;
 
 	GLuint g_lightSourceID, g_viewerID;
@@ -680,9 +678,16 @@ namespace
 	void GenerateAndBindTextures()
 	{
 		cy::TriMesh::Mtl material = g_mesh->M(0);
+
+		// Obtain filenames for different textures
 		g_diffuseTextureFilename = material.map_Kd.data;
 		g_specularTextureFilename = material.map_Ks.data;
 		g_ambientTextureFilename = material.map_Ka.data;
+
+		// Obtain color values for different textures
+		g_diffuseColor = cy::Point3f(material.Kd);
+		g_specularColor = cy::Point3f(material.Ks);
+		g_ambientColor = cy::Point3f(material.Ka);
 
 		// Obtain the actual file path for diffuse texture file
 		g_diffuseTexturePath += gc_meshFilePath;
@@ -904,7 +909,7 @@ int main(int argc, char** argv)
 
 	SetupGLUTContextEnvironment(4, 2, GLUT_CORE_PROFILE); // Setup OpenGL Context Environment for freeglut and GLEW to use
 
-	CreateWindowWithSpecifiedSizePositionTitle(480, 480, 50, 50,
+	CreateWindowWithSpecifiedSizePositionTitle(480, 480, 150, 150,
 			"CS6610 Project - Luyao Tian"
 #ifdef _DEBUG
 					" [Debug]"
