@@ -8,17 +8,21 @@
 
 layout ( location = 0 ) in vec3 i_position;
 layout ( location = 1 ) in vec3 i_normal;
-
-uniform mat4 g_vertexTransform;
-uniform mat4 g_normalTransform;
+layout ( location = 2 ) in vec2 i_texcoord;
 
 // Output
 //=======
 
-layout ( location = 0 ) out vec4 o_color;
-
+out vec4 color;
 out vec3 normal;
 out vec3 vertex;
+out vec2 texcoord;
+
+// Uniform
+//========
+
+uniform mat4 g_vertexTransform;
+uniform mat4 g_normalTransform;
 
 // Entry Point
 //============
@@ -26,7 +30,8 @@ out vec3 vertex;
 void main()
 {
 	gl_Position = g_vertexTransform * vec4( i_position, 1.0 );
-	o_color = g_normalTransform * vec4( i_normal, 1.0 );
+	color = g_normalTransform * vec4( i_normal, 1.0 );
 	normal = i_normal;
 	vertex = i_position;
+	texcoord = i_texcoord;
 }
