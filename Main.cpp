@@ -38,10 +38,19 @@ namespace
 //=================
 namespace
 {
+	// The fullscreen quad's FBO
+	static const GLfloat g_quad_vertex_buffer_data[] =
+	{ -20.0f, -20.0f, 0.0f, 20.0f, -20.0f, 0.0f, -20.0f, 20.0f, 0.0f, -20.0f,
+			20.0f, 0.0f, 20.0f, -20.0f, 0.0f, 20.0f, 20.0f, 0.0f, };
+	static const GLfloat g_quad_texcoord_buffer_data[] =
+	{ 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f, 1.0f, };
+
 	cy::TriMesh * g_mesh = nullptr;
 	cy::Point3f * g_meshVertexData = nullptr;
 	cy::Point3f * g_meshNormalData = nullptr;
 	cy::Point2f * g_meshTexcoordData = nullptr;
+
+	cy::GLRenderTexture2D * textureRenderer = nullptr;
 
 	GLuint g_textureWidth, g_textureHeight;
 
@@ -49,16 +58,25 @@ namespace
 	GLuint g_meshVertexCount, g_meshNormalCount, g_meshTexcoordCount;
 
 	// Vertex Array Object, Vertex Buffer Object, Normal Buffer Object and Texture Buffer Object
-	GLuint g_vertexArrayObject, g_vertexBufferObject, g_indexBufferObject,
-			g_normalBufferObject, g_textureBufferObject;
+	GLuint g_vertexArrayObject, g_vertexBufferObject, g_normalBufferObject,
+			g_textureBufferObject;
+
+	GLuint g_textureVAO, g_textureVBO;
 
 	GLuint g_diffuseTexture, g_specularTexture, g_ambientTexture;
 
 	GLuint g_shaderProgramID;
 	GLuint g_vertexShaderID, g_fragmentShaderID;
 
+	GLuint g_textureShaderProgramID;
+	GLuint g_textureVertexShaderID, g_textureFragmentShaderID;
+
 	char g_vertexShaderPath[FILE_PATH_BUFFER_SIZE] = "Shaders/Vertex/";
 	char g_fragmentShaderPath[FILE_PATH_BUFFER_SIZE] = "Shaders/Fragment/";
+	char g_textureVertexShaderPath[FILE_PATH_BUFFER_SIZE] =
+			"Shaders/Vertex/texture_vertex.glsl";
+	char g_textureFragmentShaderPath[FILE_PATH_BUFFER_SIZE] =
+			"Shaders/Fragment/texture_color.glsl";
 	char * g_diffuseTextureFilename;
 	char * g_specularTextureFilename;
 	char * g_ambientTextureFilename;
@@ -70,6 +88,10 @@ namespace
 	cy::GLSLShader * g_vertexShader = nullptr;
 	cy::GLSLShader * g_fragmentShader = nullptr;
 	cy::GLSLProgram * g_shaderProgram = nullptr;
+
+	cy::GLSLShader * g_textureVertexShader = nullptr;
+	cy::GLSLShader * g_textureFragmentShader = nullptr;
+	cy::GLSLProgram * g_textureShaderProgram = nullptr;
 
 	cy::Point3f g_cameraPosition = cy::Point3f(0.0f, 10.0f, 30.0f);
 	cy::Point3f g_targetPosition = cy::Point3f(0.0f, 0.0f, 0.0f);
@@ -105,6 +127,8 @@ namespace
 	GLuint g_vertexTransformationMatrixID; // MVP transformation matrix ID
 	GLuint g_normalTransformationMatrixID; // Normal transformation matrix ID
 	GLuint g_modelTransformationMatrixID; // Model transformation matrix ID
+
+	GLuint g_textureVertexTransformID;
 
 	// Parameters for Blinn Shading
 	cy::Point3f g_lightSource = gc_initialLightSourceLocation, g_viewer =
@@ -279,7 +303,7 @@ namespace
 		glBufferData(GL_ARRAY_BUFFER, sizeof(cy::Point2f) * g_meshTexcoordCount,
 				i_meshTextureData, GL_STATIC_DRAW);
 		glVertexAttribPointer(2, gc_numberOfAttributesPerTexCoord, GL_FLOAT,
-				GL_FALSE, 0, 0); // Set up Vertex Attribute Pointer for texture
+		GL_FALSE, 0, 0); // Set up Vertex Attribute Pointer for texture
 		glEnableVertexAttribArray(2); // Enable Texture Buffer Object
 	}
 
@@ -388,7 +412,6 @@ namespace
 	void CleanUpBuffers()
 	{
 		glDeleteBuffers(1, &g_vertexBufferObject);
-		glDeleteBuffers(1, &g_indexBufferObject);
 		glDeleteBuffers(1, &g_normalBufferObject);
 		glDeleteBuffers(1, &g_textureBufferObject);
 		glDeleteVertexArrays(1, &g_vertexArrayObject);
@@ -445,6 +468,35 @@ namespace
 
 		BindTransformations();
 		BindBlinnShadingParameters();
+	}
+
+	void CompileTextureShaders(const char * i_vertexShaderPath,
+			const char * i_fragmentShaderPath)
+	{
+		bool result = g_textureVertexShader->CompileFile(i_vertexShaderPath,
+		GL_VERTEX_SHADER);
+		if (!result)
+		{
+			fprintf(stderr, "Cannot compile vertex shader.\n");
+			exit(ErrorCodes::FailedToCompileVertexShader);
+		}
+		g_textureVertexShaderID = g_textureVertexShader->GetID();
+		g_textureShaderProgram->AttachShader(g_textureVertexShaderID);
+		result = g_textureFragmentShader->CompileFile(i_fragmentShaderPath,
+		GL_FRAGMENT_SHADER);
+		if (!result)
+		{
+			fprintf(stderr, "Cannot compile fragment shader.\n");
+			exit(ErrorCodes::FailedToCompileFragmentShader);
+		}
+		g_textureFragmentShaderID = g_textureFragmentShader->GetID();
+		g_textureShaderProgram->Build(g_textureVertexShader,
+				g_textureFragmentShader);
+		g_textureShaderProgramID = g_textureShaderProgram->GetID();
+		g_textureShaderProgram->Bind();
+
+		g_textureVertexTransformID = glGetUniformLocation(
+				g_textureShaderProgramID, "vertexTransform");
 	}
 
 	// Process filenames to compile and bind shaders
@@ -764,11 +816,44 @@ namespace
 	// Display content onto screen
 	void DisplayContent()
 	{
+		textureRenderer->Bind();
+
+		g_shaderProgram->Bind();
+		glClearColor(0.2f, 0.2f, 0.2f, 1.0f); // Reset background color to black
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Clear front buffer
-		glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // Reset background color to black
+
 		ProcessTransformation(); // Calculate MVP matrix for transformation
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, g_diffuseTexture);
+
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, g_specularTexture);
+
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, g_ambientTexture);
+
 		ProcessBlinnShading();
 		DrawGeometry(); // Draw geometry onto the screen
+
+		textureRenderer->Unbind();
+
+		g_textureShaderProgram->Bind();
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // Reset background color to black
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Clear front buffer
+
+		cy::Matrix4f textureTransformMat = g_projectionTransmationMatrix
+				* g_viewTransformationMatrix * g_modelTransformationMatrix;
+		glUniformMatrix4fv(g_textureVertexTransformID, 1, GL_FALSE,
+				&textureTransformMat.data[0]);
+
+		glActiveTexture(GL_TEXTURE0);
+		textureRenderer->BindTexture();
+
+		glBindVertexArray(g_textureVAO);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+		glBindVertexArray(0);
+
 		glutSwapBuffers(); // Swap front and back buffer
 	}
 
@@ -927,12 +1012,46 @@ int main(int argc, char** argv)
 
 	InitializeGLEW(); // Initialize GLEW library
 
+	textureRenderer = new cy::GLRenderTexture2D();
+
 	ProcessMeshData(); // Store related mesh data into memory
 
 	CompileAndBindShaders("teapot_vertex.glsl", "teapot_color.glsl"); // Compile and bind shaders to the program
 
 	GenerateAndBindBuffers(g_meshVertexData, g_meshNormalData,
 			g_meshTexcoordData); // Generate and bind buffers and objects
+
+	{
+		g_textureShaderProgram = new cy::GLSLProgram();
+		g_textureVertexShader = new cy::GLSLShader();
+		g_textureFragmentShader = new cy::GLSLShader();
+
+		CompileTextureShaders(g_textureVertexShaderPath,
+				g_textureFragmentShaderPath);
+
+		textureRenderer->Initialize(true, 4, 480, 480);
+
+		glGenVertexArrays(1, &g_textureVAO); // Generate Vertex Array Object
+		glBindVertexArray(g_textureVAO); // Bind Vertex Array Object so it's ready to use
+
+		glGenBuffers(1, &g_textureVBO); //Generate Vertex Buffer Object
+		glBindBuffer(GL_ARRAY_BUFFER, g_textureVBO); // Bind Vertex Buffer Object so it's ready to use
+		glBufferData(GL_ARRAY_BUFFER, sizeof(cy::Point3f) * 6,
+				&g_quad_vertex_buffer_data[0], GL_STATIC_DRAW); // Send drawing data to Vertex Buffer Object
+		glVertexAttribPointer(0, gc_numberOfVerticesPerTriangle, GL_FLOAT,
+		GL_FALSE, 0, 0); // Set up Vertex Attribute Pointer for position
+		glEnableVertexAttribArray(0); // Enable Vertex Buffer Object
+
+		glGenBuffers(1, &g_textureVBO);
+		glBindBuffer(GL_ARRAY_BUFFER, g_textureVBO);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(cy::Point2f) * 6,
+				&g_quad_texcoord_buffer_data[0], GL_STATIC_DRAW);
+		glVertexAttribPointer(1, gc_numberOfAttributesPerTexCoord, GL_FLOAT,
+		GL_FALSE, 0, 0); // Set up Vertex Attribute Pointer for texture
+		glEnableVertexAttribArray(1); // Enable Texture Buffer Object
+
+		glBindVertexArray(0); // Unbind Vertex Array Object
+	}
 
 	glutDisplayFunc(DisplayContent); // Register display callback handler for window re-paint
 
