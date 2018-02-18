@@ -539,6 +539,7 @@ namespace
 	void ProcessTransformation();
 	void ProcessBlinnShading();
 	void GenerateAndBindTextures();
+	void BindOriginMeshTextures();
 	void DrawGeometry();
 	void DisplayContent();
 	void Idle();
@@ -804,6 +805,18 @@ namespace
 		glBindTexture(GL_TEXTURE_2D, g_ambientTexture);
 	}
 
+	void BindOriginMeshTextures()
+	{
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, g_diffuseTexture);
+
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, g_specularTexture);
+
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, g_ambientTexture);
+	}
+
 	// Render geometries onto screen
 	void DrawGeometry()
 	{
@@ -818,41 +831,38 @@ namespace
 	{
 		textureRenderer->Bind();
 
-		g_shaderProgram->Bind();
-		glClearColor(0.2f, 0.2f, 0.2f, 1.0f); // Reset background color to black
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Clear front buffer
+		{
+			g_shaderProgram->Bind();
+			glClearColor(0.2f, 0.2f, 0.2f, 1.0f); // Reset background color to black
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Clear front buffer
 
-		ProcessTransformation(); // Calculate MVP matrix for transformation
+			ProcessTransformation(); // Calculate MVP matrix for transformation
 
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, g_diffuseTexture);
+			BindOriginMeshTextures();
 
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, g_specularTexture);
-
-		glActiveTexture(GL_TEXTURE2);
-		glBindTexture(GL_TEXTURE_2D, g_ambientTexture);
-
-		ProcessBlinnShading();
-		DrawGeometry(); // Draw geometry onto the screen
+			ProcessBlinnShading();
+			DrawGeometry(); // Draw geometry onto the screen
+		}
 
 		textureRenderer->Unbind();
 
-		g_textureShaderProgram->Bind();
-		glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // Reset background color to black
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Clear front buffer
+		{
+			g_textureShaderProgram->Bind();
+			glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // Reset background color to black
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Clear front buffer
 
-		cy::Matrix4f textureTransformMat = g_projectionTransmationMatrix
-				* g_viewTransformationMatrix * g_modelTransformationMatrix;
-		glUniformMatrix4fv(g_textureVertexTransformID, 1, GL_FALSE,
-				&textureTransformMat.data[0]);
+			cy::Matrix4f textureTransformMat = g_projectionTransmationMatrix
+					* g_viewTransformationMatrix * g_modelTransformationMatrix;
+			glUniformMatrix4fv(g_textureVertexTransformID, 1, GL_FALSE,
+					&textureTransformMat.data[0]);
 
-		glActiveTexture(GL_TEXTURE0);
-		textureRenderer->BindTexture();
+			glActiveTexture(GL_TEXTURE0);
+			textureRenderer->BindTexture();
 
-		glBindVertexArray(g_textureVAO);
-		glDrawArrays(GL_TRIANGLES, 0, 6);
-		glBindVertexArray(0);
+			glBindVertexArray(g_textureVAO);
+			glDrawArrays(GL_TRIANGLES, 0, 6);
+			glBindVertexArray(0);
+		}
 
 		glutSwapBuffers(); // Swap front and back buffer
 	}
