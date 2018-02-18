@@ -27,6 +27,7 @@
 namespace
 {
 	constexpr auto gc_numberOfVerticesPerTriangle = 3;
+	constexpr auto gc_numberOfAttributesPerTexCoord = 2;
 	const auto gc_initialLightSourceLocation = cy::Point3f(0.0f, 0.0f, 10.0f);
 	constexpr auto gc_inputControlScaleParameter = 0.01f;
 	const char * gc_defaultMeshFile = "Assets/Meshes/teapot/teapot.obj";
@@ -108,7 +109,7 @@ namespace
 	// Parameters for Blinn Shading
 	cy::Point3f g_lightSource = gc_initialLightSourceLocation, g_viewer =
 			g_cameraPosition;
-	cy::Point3f g_diffuseColor,	g_specularColor, g_ambientColor;
+	cy::Point3f g_diffuseColor, g_specularColor, g_ambientColor;
 	GLfloat g_shininess = 50.0f;
 
 	GLuint g_lightSourceID, g_viewerID;
@@ -277,8 +278,9 @@ namespace
 		glBindBuffer(GL_ARRAY_BUFFER, g_textureBufferObject);
 		glBufferData(GL_ARRAY_BUFFER, sizeof(cy::Point2f) * g_meshTexcoordCount,
 				i_meshTextureData, GL_STATIC_DRAW);
-		glEnableVertexAttribArray(2);
-		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, 0);
+		glVertexAttribPointer(2, gc_numberOfAttributesPerTexCoord, GL_FLOAT,
+				GL_FALSE, 0, 0); // Set up Vertex Attribute Pointer for texture
+		glEnableVertexAttribArray(2); // Enable Texture Buffer Object
 	}
 
 	// Initialize buffers needed for the program
