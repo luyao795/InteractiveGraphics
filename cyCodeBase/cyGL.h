@@ -860,7 +860,7 @@ namespace cy
 		mutable GLint prevViewport[4];//!< Temporary storage for the size and position of the previous frame-buffer used before binding this buffer
 
 	public:
-		GLRenderBuffer() : framebufferID(CY_GL_INVALID_ID), depthbufferID(CY_GL_INVALID_ID), prevBufferID(0), bufferWidth(0), bufferHeight(0)
+		GLRenderBuffer() : framebufferID(CY_GL_INVALID_ID), depthbufferID(CY_GL_INVALID_ID), bufferWidth(0), bufferHeight(0), prevBufferID(0)
 		{}		//!< Constructor.
 		~GLRenderBuffer()
 		{	if ( GL::CheckContext() ) Delete();}		//!< Destructor.

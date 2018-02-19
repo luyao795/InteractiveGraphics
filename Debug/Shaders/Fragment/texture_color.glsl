@@ -1,11 +1,24 @@
 #version 420
 
-in vec2 UV;
+// Input
+//======
+
+in vec2 texcoord;
+
+// Output
+//=======
 
 out vec3 color;
 
+// Uniform
+//========
+
 uniform sampler2D renderedTexture;
 
-void main(){
-	color = texture2D( renderedTexture, UV ).rgb;
+// Entry Point
+//============
+
+void main()
+{
+	color = texture2D( renderedTexture, texcoord ).rgb;
 }

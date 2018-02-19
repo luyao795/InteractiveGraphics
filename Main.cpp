@@ -31,7 +31,77 @@ namespace
 	const auto gc_initialLightSourceLocation = cy::Point3f(0.0f, 0.0f, 10.0f);
 	constexpr auto gc_inputControlScaleParameter = 0.01f;
 	const char * gc_defaultMeshFile = "Assets/Meshes/teapot/teapot.obj";
+	const std::string gc_vertexShaderPath = "Shaders/Vertex/";
+	const std::string gc_fragmentShaderPath = "Shaders/Fragment/";
 	const std::string gc_meshFilePath = "Assets/Meshes/";
+	constexpr auto gc_windowHeight = 480;
+	constexpr auto gc_windowWidth = 480;
+	constexpr auto gc_initialWindowPositionX = 150;
+	constexpr auto gc_initialWindowPositionY = 150;
+}
+
+// Global Structs
+namespace
+{
+	struct RenderingSet
+	{
+		RenderingSet(cy::GLSLProgram * i_shaderProgram,
+				cy::GLSLShader * i_vertexShader,
+				cy::GLSLShader * i_fragmentShader)
+		{
+			shaderProgram = i_shaderProgram;
+			vertexShader = i_vertexShader;
+			fragmentShader = i_fragmentShader;
+
+			shaderProgramID = i_shaderProgram->GetID();
+			vertexShaderID = i_vertexShader->GetID();
+			fragmentShaderID = i_fragmentShader->GetID();
+		}
+
+		RenderingSet()
+		{
+			shaderProgram = nullptr;
+			vertexShader = nullptr;
+			fragmentShader = nullptr;
+
+			shaderProgramID = 0;
+			vertexShaderID = 0;
+			fragmentShaderID = 0;
+
+			vertexShaderPath = "";
+			fragmentShaderPath = "";
+		}
+
+		~RenderingSet()
+		{
+			Delete();
+		}
+
+		void Delete()
+		{
+			if (!shaderProgram)
+				shaderProgram->Delete();
+			if (!vertexShader)
+				vertexShader->Delete();
+			if (!fragmentShader)
+				fragmentShader->Delete();
+
+			shaderProgramID = 0;
+			vertexShaderID = 0;
+			fragmentShaderID = 0;
+
+			vertexShaderPath = "";
+			fragmentShaderPath = "";
+		}
+
+		cy::GLSLProgram * shaderProgram;
+		cy::GLSLShader * vertexShader;
+		cy::GLSLShader * fragmentShader;
+
+		std::string vertexShaderPath, fragmentShaderPath;
+
+		GLuint shaderProgramID, vertexShaderID, fragmentShaderID;
+	};
 }
 
 // Gloabl Variables
@@ -65,18 +135,8 @@ namespace
 
 	GLuint g_diffuseTexture, g_specularTexture, g_ambientTexture;
 
-	GLuint g_shaderProgramID;
-	GLuint g_vertexShaderID, g_fragmentShaderID;
-
-	GLuint g_textureShaderProgramID;
-	GLuint g_textureVertexShaderID, g_textureFragmentShaderID;
-
-	char g_vertexShaderPath[FILE_PATH_BUFFER_SIZE] = "Shaders/Vertex/";
-	char g_fragmentShaderPath[FILE_PATH_BUFFER_SIZE] = "Shaders/Fragment/";
-	char g_textureVertexShaderPath[FILE_PATH_BUFFER_SIZE] =
-			"Shaders/Vertex/texture_vertex.glsl";
-	char g_textureFragmentShaderPath[FILE_PATH_BUFFER_SIZE] =
-			"Shaders/Fragment/texture_color.glsl";
+	std::string g_vertexShaderPath;
+	std::string g_fragmentShaderPath;
 	char * g_diffuseTextureFilename;
 	char * g_specularTextureFilename;
 	char * g_ambientTextureFilename;
@@ -85,13 +145,9 @@ namespace
 	std::string g_ambientTexturePath;
 	std::string g_subdirectory = "teapot/";
 
-	cy::GLSLShader * g_vertexShader = nullptr;
-	cy::GLSLShader * g_fragmentShader = nullptr;
-	cy::GLSLProgram * g_shaderProgram = nullptr;
+	RenderingSet * g_meshAsTextureRenderingSet = nullptr;
 
-	cy::GLSLShader * g_textureVertexShader = nullptr;
-	cy::GLSLShader * g_textureFragmentShader = nullptr;
-	cy::GLSLProgram * g_textureShaderProgram = nullptr;
+	RenderingSet * g_physicalMeshRenderingSet = nullptr;
 
 	cy::Point3f g_cameraPosition = cy::Point3f(0.0f, 10.0f, 30.0f);
 	cy::Point3f g_targetPosition = cy::Point3f(0.0f, 0.0f, 0.0f);
@@ -214,19 +270,21 @@ namespace
 	void CreateWindowWithSpecifiedSizePositionTitle(int i_sizeX, int i_sizeY,
 			int i_posX, int i_posY, const char * i_windowTitle);
 	void InitializeGLEW();
+	void InitializeRenderingSets();
 	void GenerateVertexNormals();
 	void GenerateAndBindVertexBuffer(cy::Point3f * i_meshVertexData);
 	void GenerateAndBindNormalBuffer(cy::Point3f * i_meshNormalData);
 	void GenerateAndBindTextureBuffer(cy::Point2f * i_meshTextureData);
 	void GenerateAndBindBuffers(cy::Point3f * i_meshVertexData,
 			cy::Point3f * i_meshNormalData, cy::Point2f * i_meshTextureData);
+	void GenerateAndBindBuffersForFinalTexture();
 	void BindTransformations();
 	void BindBlinnShadingParameters();
 	// Cleanup
 	//--------
 	void UnloadMeshFile();
 	void UnloadTextureData();
-	void UnloadShaderHandler();
+	void UnloadShaderHandler(RenderingSet * i_renderingSet);
 	void CleanUpShaders();
 	void CleanUp();
 
@@ -262,6 +320,17 @@ namespace
 			fprintf(stderr, "Error: '%s'\n", glewGetErrorString(result));
 			exit(ErrorCodes::FailedToInitializeGLEW); // Either use exit() or return to terminate the program
 		}
+	}
+
+	void InitializeRenderingSets()
+	{
+		textureRenderer = new cy::GLRenderTexture2D();
+
+		g_meshAsTextureRenderingSet = new RenderingSet(new cy::GLSLProgram(),
+				new cy::GLSLShader(), new cy::GLSLShader());
+
+		g_physicalMeshRenderingSet = new RenderingSet(new cy::GLSLProgram(),
+				new cy::GLSLShader(), new cy::GLSLShader());
 	}
 
 	// Initialize vertex normals for the mesh
@@ -320,30 +389,65 @@ namespace
 		glBindVertexArray(0); // Unbind Vertex Array Object
 	}
 
+	void GenerateAndBindBuffersForFinalTexture()
+	{
+		g_textureVertexTransformID = glGetUniformLocation(
+				g_physicalMeshRenderingSet->shaderProgramID, "vertexTransform");
+
+		textureRenderer->Initialize(true, 3, gc_windowWidth, gc_windowHeight);
+
+		glGenVertexArrays(1, &g_textureVAO); // Generate Vertex Array Object
+		glBindVertexArray(g_textureVAO); // Bind Vertex Array Object so it's ready to use
+
+		glGenBuffers(1, &g_textureVBO); //Generate Vertex Buffer Object
+		glBindBuffer(GL_ARRAY_BUFFER, g_textureVBO); // Bind Vertex Buffer Object so it's ready to use
+		glBufferData(GL_ARRAY_BUFFER, sizeof(cy::Point3f) * 6,
+				&g_quad_vertex_buffer_data[0], GL_STATIC_DRAW); // Send drawing data to Vertex Buffer Object
+		glVertexAttribPointer(0, gc_numberOfVerticesPerTriangle, GL_FLOAT,
+		GL_FALSE, 0, 0); // Set up Vertex Attribute Pointer for position
+		glEnableVertexAttribArray(0); // Enable Vertex Buffer Object
+
+		glGenBuffers(1, &g_textureVBO);
+		glBindBuffer(GL_ARRAY_BUFFER, g_textureVBO);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(cy::Point2f) * 6,
+				&g_quad_texcoord_buffer_data[0], GL_STATIC_DRAW);
+		glVertexAttribPointer(1, gc_numberOfAttributesPerTexCoord, GL_FLOAT,
+		GL_FALSE, 0, 0); // Set up Vertex Attribute Pointer for texture
+		glEnableVertexAttribArray(1); // Enable Texture Buffer Object
+
+		glBindVertexArray(0); // Unbind Vertex Array Object
+	}
+
 	// Bind transformation matrices to uniform variables in shaders
 	void BindTransformations()
 	{
-		g_vertexTransformationMatrixID = glGetUniformLocation(g_shaderProgramID,
+		g_vertexTransformationMatrixID = glGetUniformLocation(
+				g_meshAsTextureRenderingSet->shaderProgramID,
 				"g_vertexTransform");
-		g_normalTransformationMatrixID = glGetUniformLocation(g_shaderProgramID,
+		g_normalTransformationMatrixID = glGetUniformLocation(
+				g_meshAsTextureRenderingSet->shaderProgramID,
 				"g_normalTransform");
-		g_modelTransformationMatrixID = glGetUniformLocation(g_shaderProgramID,
+		g_modelTransformationMatrixID = glGetUniformLocation(
+				g_meshAsTextureRenderingSet->shaderProgramID,
 				"g_modelTransform");
 	}
 
 	// Bind Blinn Shading parameters to uniform variables in shaders
 	void BindBlinnShadingParameters()
 	{
-		g_shininessID = glGetUniformLocation(g_shaderProgramID, "g_shininess");
-		g_lightSourceID = glGetUniformLocation(g_shaderProgramID,
-				"g_lightSource");
-		g_viewerID = glGetUniformLocation(g_shaderProgramID, "g_viewer");
-		g_diffuseColorID = glGetUniformLocation(g_shaderProgramID,
-				"g_diffuseColor");
-		g_specularColorID = glGetUniformLocation(g_shaderProgramID,
+		g_shininessID = glGetUniformLocation(
+				g_meshAsTextureRenderingSet->shaderProgramID, "g_shininess");
+		g_lightSourceID = glGetUniformLocation(
+				g_meshAsTextureRenderingSet->shaderProgramID, "g_lightSource");
+		g_viewerID = glGetUniformLocation(
+				g_meshAsTextureRenderingSet->shaderProgramID, "g_viewer");
+		g_diffuseColorID = glGetUniformLocation(
+				g_meshAsTextureRenderingSet->shaderProgramID, "g_diffuseColor");
+		g_specularColorID = glGetUniformLocation(
+				g_meshAsTextureRenderingSet->shaderProgramID,
 				"g_specularColor");
-		g_ambientColorID = glGetUniformLocation(g_shaderProgramID,
-				"g_ambientColor");
+		g_ambientColorID = glGetUniformLocation(
+				g_meshAsTextureRenderingSet->shaderProgramID, "g_ambientColor");
 	}
 
 	// Cleanup
@@ -368,8 +472,7 @@ namespace
 		}
 		if (g_mesh)
 		{
-			delete g_mesh;
-			//g_mesh = nullptr;
+			delete g_mesh; // This will nullify all its members automatically
 		}
 	}
 
@@ -381,31 +484,21 @@ namespace
 	}
 
 	// Unload shaders being used by the program
-	void UnloadShaderHandler()
+	void UnloadShaderHandler(RenderingSet * i_renderingSet)
 	{
-		g_vertexShader->Delete();
-		g_fragmentShader->Delete();
-		g_shaderProgram->Delete();
+		i_renderingSet->vertexShader->Delete();
+		i_renderingSet->fragmentShader->Delete();
+		i_renderingSet->shaderProgram->Delete();
 	}
 
 	// Release memory being used by storing shaders
 	void CleanUpShaders()
 	{
-		if (g_vertexShader)
-		{
-			delete g_vertexShader;
-			g_vertexShader = nullptr;
-		}
-		if (g_fragmentShader)
-		{
-			delete g_fragmentShader;
-			g_fragmentShader = nullptr;
-		}
-		if (g_shaderProgram)
-		{
-			delete g_shaderProgram;
-			g_shaderProgram = nullptr;
-		}
+		if (g_meshAsTextureRenderingSet)
+			g_meshAsTextureRenderingSet->Delete();
+
+		if (g_physicalMeshRenderingSet)
+			g_physicalMeshRenderingSet->Delete();
 	}
 
 	// Cleanup buffers being used by the program
@@ -415,6 +508,8 @@ namespace
 		glDeleteBuffers(1, &g_normalBufferObject);
 		glDeleteBuffers(1, &g_textureBufferObject);
 		glDeleteVertexArrays(1, &g_vertexArrayObject);
+		glDeleteBuffers(1, &g_textureVBO);
+		glDeleteVertexArrays(1, &g_textureVAO);
 	}
 
 	// Final cleanup function
@@ -433,89 +528,75 @@ namespace
 {
 	// Declaration
 	//============
-	void CompileShaders(const char * i_vertexShaderPath,
-			const char * i_fragmentShaderPath);
-	void CompileAndBindShaders(const char * i_vertexShaderFileName,
-			const char * i_fragmentShaderFileName);
-	void RecompileShaders();
+	void CompileShaders(RenderingSet * i_renderingSet,
+			std::string i_vertexShaderPath, std::string i_fragmentShaderPath);
+	void CompileAndBindShaders(RenderingSet * i_renderingSet,
+			std::string i_vertexShaderFileName,
+			std::string i_fragmentShaderFileName);
+	void RecompileShaders(RenderingSet * i_renderingSet,
+			std::string i_vertexShaderFilename,
+			std::string i_fragmentShaderFilename);
 
 	// Definition
 	//===========
 	// Compile shaders with given file paths
-	void CompileShaders(const char * i_vertexShaderPath,
-			const char * i_fragmentShaderPath)
+	void CompileShaders(RenderingSet * i_renderingSet,
+			std::string i_vertexShaderPath, std::string i_fragmentShaderPath)
 	{
-		bool result = g_vertexShader->CompileFile(i_vertexShaderPath,
-		GL_VERTEX_SHADER);
+		bool result = i_renderingSet->vertexShader->CompileFile(
+				i_vertexShaderPath.data(),
+				GL_VERTEX_SHADER);
 		if (!result)
 		{
 			fprintf(stderr, "Cannot compile vertex shader.\n");
 			exit(ErrorCodes::FailedToCompileVertexShader);
 		}
-		g_vertexShaderID = g_vertexShader->GetID();
-		g_shaderProgram->AttachShader(g_vertexShaderID);
-		result = g_fragmentShader->CompileFile(i_fragmentShaderPath,
-		GL_FRAGMENT_SHADER);
+		i_renderingSet->vertexShaderID = i_renderingSet->vertexShader->GetID();
+		i_renderingSet->shaderProgram->AttachShader(
+				i_renderingSet->vertexShaderID);
+		result = i_renderingSet->fragmentShader->CompileFile(
+				i_fragmentShaderPath.data(),
+				GL_FRAGMENT_SHADER);
 		if (!result)
 		{
 			fprintf(stderr, "Cannot compile fragment shader.\n");
 			exit(ErrorCodes::FailedToCompileFragmentShader);
 		}
-		g_fragmentShaderID = g_fragmentShader->GetID();
-		g_shaderProgram->Build(g_vertexShader, g_fragmentShader);
-		g_shaderProgramID = g_shaderProgram->GetID();
-		g_shaderProgram->Bind();
-
-		BindTransformations();
-		BindBlinnShadingParameters();
-	}
-
-	void CompileTextureShaders(const char * i_vertexShaderPath,
-			const char * i_fragmentShaderPath)
-	{
-		bool result = g_textureVertexShader->CompileFile(i_vertexShaderPath,
-		GL_VERTEX_SHADER);
-		if (!result)
-		{
-			fprintf(stderr, "Cannot compile vertex shader.\n");
-			exit(ErrorCodes::FailedToCompileVertexShader);
-		}
-		g_textureVertexShaderID = g_textureVertexShader->GetID();
-		g_textureShaderProgram->AttachShader(g_textureVertexShaderID);
-		result = g_textureFragmentShader->CompileFile(i_fragmentShaderPath,
-		GL_FRAGMENT_SHADER);
-		if (!result)
-		{
-			fprintf(stderr, "Cannot compile fragment shader.\n");
-			exit(ErrorCodes::FailedToCompileFragmentShader);
-		}
-		g_textureFragmentShaderID = g_textureFragmentShader->GetID();
-		g_textureShaderProgram->Build(g_textureVertexShader,
-				g_textureFragmentShader);
-		g_textureShaderProgramID = g_textureShaderProgram->GetID();
-		g_textureShaderProgram->Bind();
-
-		g_textureVertexTransformID = glGetUniformLocation(
-				g_textureShaderProgramID, "vertexTransform");
+		i_renderingSet->fragmentShaderID =
+				i_renderingSet->fragmentShader->GetID();
+		i_renderingSet->shaderProgram->Build(i_renderingSet->vertexShader,
+				i_renderingSet->fragmentShader);
+		i_renderingSet->shaderProgramID =
+				i_renderingSet->shaderProgram->GetID();
+		i_renderingSet->shaderProgram->Bind();
 	}
 
 	// Process filenames to compile and bind shaders
-	void CompileAndBindShaders(const char * i_vertexShaderFileName,
-			const char * i_fragmentShaderFileName)
+	void CompileAndBindShaders(RenderingSet * i_renderingSet,
+			std::string i_vertexShaderFileName,
+			std::string i_fragmentShaderFileName)
 	{
-		strcat(g_vertexShaderPath, i_vertexShaderFileName);
-		strcat(g_fragmentShaderPath, i_fragmentShaderFileName);
-		g_shaderProgram = new cy::GLSLProgram();
-		g_vertexShader = new cy::GLSLShader();
-		g_fragmentShader = new cy::GLSLShader();
-		CompileShaders(g_vertexShaderPath, g_fragmentShaderPath); // Compile vertex and fragment shaders from file
+		g_vertexShaderPath = "";
+		g_fragmentShaderPath = "";
+
+		g_vertexShaderPath += gc_vertexShaderPath;
+		g_fragmentShaderPath += gc_fragmentShaderPath;
+
+		g_vertexShaderPath += i_vertexShaderFileName;
+		g_fragmentShaderPath += i_fragmentShaderFileName;
+
+		CompileShaders(i_renderingSet, g_vertexShaderPath,
+				g_fragmentShaderPath); // Compile vertex and fragment shaders from file
 	}
 
 	// Recompile shaders at runtime
-	void RecompileShaders()
+	void RecompileShaders(RenderingSet * i_renderingSet,
+			std::string i_vertexShaderFilename,
+			std::string i_fragmentShaderFilename)
 	{
-		UnloadShaderHandler();
-		CompileShaders(g_vertexShaderPath, g_fragmentShaderPath);
+		UnloadShaderHandler(i_renderingSet);
+		CompileAndBindShaders(i_renderingSet, i_vertexShaderFilename,
+				i_fragmentShaderFilename); // Compile and bind shaders to the program
 	}
 }
 
@@ -541,6 +622,8 @@ namespace
 	void GenerateAndBindTextures();
 	void BindOriginMeshTextures();
 	void DrawGeometry();
+	void RenderToTexture();
+	void RenderToScreen();
 	void DisplayContent();
 	void Idle();
 
@@ -826,43 +909,47 @@ namespace
 		glBindVertexArray(0); // Disable Vertex Array Object
 	}
 
-	// Display content onto screen
-	void DisplayContent()
+	void RenderToTexture()
 	{
 		textureRenderer->Bind();
 
-		{
-			g_shaderProgram->Bind();
-			glClearColor(0.2f, 0.2f, 0.2f, 1.0f); // Reset background color to black
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Clear front buffer
+		g_meshAsTextureRenderingSet->shaderProgram->Bind();
+		glClearColor(0.2f, 0.2f, 0.2f, 1.0f); // Reset background color to dark gray
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Clear front buffer
 
-			ProcessTransformation(); // Calculate MVP matrix for transformation
-
-			BindOriginMeshTextures();
-
-			ProcessBlinnShading();
-			DrawGeometry(); // Draw geometry onto the screen
-		}
+		ProcessTransformation(); // Calculate MVP matrix for transformation
+		BindOriginMeshTextures();
+		ProcessBlinnShading();
+		DrawGeometry(); // Draw geometry onto the texture
 
 		textureRenderer->Unbind();
+	}
 
-		{
-			g_textureShaderProgram->Bind();
-			glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // Reset background color to black
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Clear front buffer
+	void RenderToScreen()
+	{
+		g_physicalMeshRenderingSet->shaderProgram->Bind();
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // Reset background color to black
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Clear front buffer
 
-			cy::Matrix4f textureTransformMat = g_projectionTransmationMatrix
-					* g_viewTransformationMatrix * g_modelTransformationMatrix;
-			glUniformMatrix4fv(g_textureVertexTransformID, 1, GL_FALSE,
-					&textureTransformMat.data[0]);
+		cy::Matrix4f textureTransformMat = g_projectionTransmationMatrix
+				* g_viewTransformationMatrix * g_modelTransformationMatrix;
+		glUniformMatrix4fv(g_textureVertexTransformID, 1, GL_FALSE,
+				&textureTransformMat.data[0]);
 
-			glActiveTexture(GL_TEXTURE0);
-			textureRenderer->BindTexture();
+		glActiveTexture(GL_TEXTURE0);
+		textureRenderer->BindTexture();
 
-			glBindVertexArray(g_textureVAO);
-			glDrawArrays(GL_TRIANGLES, 0, 6);
-			glBindVertexArray(0);
-		}
+		glBindVertexArray(g_textureVAO);
+		glDrawArrays(GL_TRIANGLES, 0, sizeof(g_quad_vertex_buffer_data));
+		glBindVertexArray(0);
+	}
+
+	// Display content onto screen
+	void DisplayContent()
+	{
+		RenderToTexture();
+
+		RenderToScreen();
 
 		glutSwapBuffers(); // Swap front and back buffer
 	}
@@ -895,8 +982,8 @@ namespace
 		// This section is for exiting the application with Esc key
 		if (i_key == KeyCodes::Escape)
 		{
-			CleanUp();
 			glutLeaveMainLoop(); // Exit the infinitely event-processing loop
+			CleanUp();
 		}
 	}
 
@@ -910,7 +997,12 @@ namespace
 
 		// This section is for recompiling shaders with F6 key
 		if (i_key == GLUT_KEY_F6)
-			RecompileShaders();
+		{
+			RecompileShaders(g_meshAsTextureRenderingSet, "teapot_vertex.glsl",
+					"teapot_color.glsl");
+			RecompileShaders(g_physicalMeshRenderingSet, "texture_vertex.glsl",
+					"texture_color.glsl");
+		}
 	}
 
 	void ProcessFunctionKeyRelease(GLint i_key, GLint i_x, GLint i_y)
@@ -1006,7 +1098,8 @@ int main(int argc, char** argv)
 
 	SetupGLUTContextEnvironment(4, 2, GLUT_CORE_PROFILE); // Setup OpenGL Context Environment for freeglut and GLEW to use
 
-	CreateWindowWithSpecifiedSizePositionTitle(480, 480, 150, 150,
+	CreateWindowWithSpecifiedSizePositionTitle(gc_windowWidth, gc_windowHeight,
+			gc_initialWindowPositionX, gc_initialWindowPositionY,
 			"CS6610 Project - Luyao Tian"
 #ifdef _DEBUG
 					" [Debug]"
@@ -1022,46 +1115,24 @@ int main(int argc, char** argv)
 
 	InitializeGLEW(); // Initialize GLEW library
 
-	textureRenderer = new cy::GLRenderTexture2D();
+	InitializeRenderingSets(); // Initialize different rendering sets for different shaders
 
 	ProcessMeshData(); // Store related mesh data into memory
 
-	CompileAndBindShaders("teapot_vertex.glsl", "teapot_color.glsl"); // Compile and bind shaders to the program
+	CompileAndBindShaders(g_meshAsTextureRenderingSet, "teapot_vertex.glsl",
+			"teapot_color.glsl"); // Compile and bind shaders to the program
+
+	BindTransformations();
+
+	BindBlinnShadingParameters();
 
 	GenerateAndBindBuffers(g_meshVertexData, g_meshNormalData,
 			g_meshTexcoordData); // Generate and bind buffers and objects
 
-	{
-		g_textureShaderProgram = new cy::GLSLProgram();
-		g_textureVertexShader = new cy::GLSLShader();
-		g_textureFragmentShader = new cy::GLSLShader();
+	CompileAndBindShaders(g_physicalMeshRenderingSet, "texture_vertex.glsl",
+			"texture_color.glsl"); // Compile and bind shaders to the program
 
-		CompileTextureShaders(g_textureVertexShaderPath,
-				g_textureFragmentShaderPath);
-
-		textureRenderer->Initialize(true, 4, 480, 480);
-
-		glGenVertexArrays(1, &g_textureVAO); // Generate Vertex Array Object
-		glBindVertexArray(g_textureVAO); // Bind Vertex Array Object so it's ready to use
-
-		glGenBuffers(1, &g_textureVBO); //Generate Vertex Buffer Object
-		glBindBuffer(GL_ARRAY_BUFFER, g_textureVBO); // Bind Vertex Buffer Object so it's ready to use
-		glBufferData(GL_ARRAY_BUFFER, sizeof(cy::Point3f) * 6,
-				&g_quad_vertex_buffer_data[0], GL_STATIC_DRAW); // Send drawing data to Vertex Buffer Object
-		glVertexAttribPointer(0, gc_numberOfVerticesPerTriangle, GL_FLOAT,
-		GL_FALSE, 0, 0); // Set up Vertex Attribute Pointer for position
-		glEnableVertexAttribArray(0); // Enable Vertex Buffer Object
-
-		glGenBuffers(1, &g_textureVBO);
-		glBindBuffer(GL_ARRAY_BUFFER, g_textureVBO);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(cy::Point2f) * 6,
-				&g_quad_texcoord_buffer_data[0], GL_STATIC_DRAW);
-		glVertexAttribPointer(1, gc_numberOfAttributesPerTexCoord, GL_FLOAT,
-		GL_FALSE, 0, 0); // Set up Vertex Attribute Pointer for texture
-		glEnableVertexAttribArray(1); // Enable Texture Buffer Object
-
-		glBindVertexArray(0); // Unbind Vertex Array Object
-	}
+	GenerateAndBindBuffersForFinalTexture();
 
 	glutDisplayFunc(DisplayContent); // Register display callback handler for window re-paint
 
