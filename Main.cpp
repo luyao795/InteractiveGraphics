@@ -937,6 +937,9 @@ namespace
 				&textureTransformMat.data[0]);
 
 		glActiveTexture(GL_TEXTURE0);
+		textureRenderer->BuildTextureMipmaps();
+		textureRenderer->SetTextureMaxAnisotropy();
+		textureRenderer->SetTextureFilteringMode(GL_LINEAR, GL_LINEAR_MIPMAP_LINEAR);
 		textureRenderer->BindTexture();
 
 		glBindVertexArray(g_textureVAO);
