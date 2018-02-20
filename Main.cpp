@@ -20,13 +20,13 @@
 // This file was obtained from https://github.com/triplepointfive/ogldev/blob/master/tutorial21/math_3d.h
 #include "math_3d.h"
 
-#define FILE_PATH_BUFFER_SIZE 1024
-
 // Global Constants
 //=================
 namespace
 {
 	constexpr auto gc_numberOfVerticesPerTriangle = 3;
+	constexpr auto gc_numberOfAttributesPerVertex = 3;
+	constexpr auto gc_numberOfAttributesPerNormal = 3;
 	constexpr auto gc_numberOfAttributesPerTexCoord = 2;
 	const auto gc_initialLightSourceLocation = cy::Point3f(0.0f, 0.0f, 10.0f);
 	constexpr auto gc_inputControlScaleParameter = 0.01f;
@@ -108,7 +108,7 @@ namespace
 //=================
 namespace
 {
-	// The fullscreen quad's FBO
+	// The quad's vertex and uv data
 	static const GLfloat g_quad_vertex_buffer_data[] =
 	{ -20.0f, -20.0f, 0.0f, 20.0f, -20.0f, 0.0f, -20.0f, 20.0f, 0.0f, -20.0f,
 			20.0f, 0.0f, 20.0f, -20.0f, 0.0f, 20.0f, 20.0f, 0.0f, };
@@ -347,7 +347,7 @@ namespace
 		glBindBuffer(GL_ARRAY_BUFFER, g_vertexBufferObject); // Bind Vertex Buffer Object so it's ready to use
 		glBufferData(GL_ARRAY_BUFFER, sizeof(cy::Point3f) * g_meshVertexCount,
 				i_meshVertexData, GL_STATIC_DRAW); // Send drawing data to Vertex Buffer Object
-		glVertexAttribPointer(0, gc_numberOfVerticesPerTriangle, GL_FLOAT,
+		glVertexAttribPointer(0, gc_numberOfAttributesPerVertex, GL_FLOAT,
 		GL_FALSE, 0, 0); // Set up Vertex Attribute Pointer for position
 		glEnableVertexAttribArray(0); // Enable Vertex Buffer Object
 	}
@@ -359,7 +359,7 @@ namespace
 		glBindBuffer(GL_ARRAY_BUFFER, g_normalBufferObject);
 		glBufferData(GL_ARRAY_BUFFER, sizeof(cy::Point3f) * g_meshNormalCount,
 				i_meshNormalData, GL_STATIC_DRAW);
-		glVertexAttribPointer(1, gc_numberOfVerticesPerTriangle, GL_FLOAT,
+		glVertexAttribPointer(1, gc_numberOfAttributesPerNormal, GL_FLOAT,
 		GL_FALSE, 0, 0); // Set up Vertex Attribute Pointer for position
 		glEnableVertexAttribArray(1); // Enable Normal Buffer Object
 	}
@@ -401,15 +401,21 @@ namespace
 
 		glGenBuffers(1, &g_textureVBO); //Generate Vertex Buffer Object
 		glBindBuffer(GL_ARRAY_BUFFER, g_textureVBO); // Bind Vertex Buffer Object so it's ready to use
-		glBufferData(GL_ARRAY_BUFFER, sizeof(cy::Point3f) * 6,
+		glBufferData(GL_ARRAY_BUFFER,
+				sizeof(cy::Point3f) * sizeof(g_quad_vertex_buffer_data)
+						/ sizeof(g_quad_vertex_buffer_data[0])
+						/ gc_numberOfAttributesPerVertex,
 				&g_quad_vertex_buffer_data[0], GL_STATIC_DRAW); // Send drawing data to Vertex Buffer Object
-		glVertexAttribPointer(0, gc_numberOfVerticesPerTriangle, GL_FLOAT,
+		glVertexAttribPointer(0, gc_numberOfAttributesPerVertex, GL_FLOAT,
 		GL_FALSE, 0, 0); // Set up Vertex Attribute Pointer for position
 		glEnableVertexAttribArray(0); // Enable Vertex Buffer Object
 
 		glGenBuffers(1, &g_textureVBO);
 		glBindBuffer(GL_ARRAY_BUFFER, g_textureVBO);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(cy::Point2f) * 6,
+		glBufferData(GL_ARRAY_BUFFER,
+				sizeof(cy::Point2f) * sizeof(g_quad_texcoord_buffer_data)
+						/ sizeof(g_quad_texcoord_buffer_data[0])
+						/ gc_numberOfAttributesPerTexCoord,
 				&g_quad_texcoord_buffer_data[0], GL_STATIC_DRAW);
 		glVertexAttribPointer(1, gc_numberOfAttributesPerTexCoord, GL_FLOAT,
 		GL_FALSE, 0, 0); // Set up Vertex Attribute Pointer for texture
@@ -939,11 +945,15 @@ namespace
 		glActiveTexture(GL_TEXTURE0);
 		textureRenderer->BuildTextureMipmaps();
 		textureRenderer->SetTextureMaxAnisotropy();
-		textureRenderer->SetTextureFilteringMode(GL_LINEAR, GL_LINEAR_MIPMAP_LINEAR);
+		textureRenderer->SetTextureFilteringMode(GL_LINEAR,
+		GL_LINEAR_MIPMAP_LINEAR);
 		textureRenderer->BindTexture();
 
 		glBindVertexArray(g_textureVAO);
-		glDrawArrays(GL_TRIANGLES, 0, sizeof(g_quad_vertex_buffer_data));
+		glDrawArrays(GL_TRIANGLES, 0,
+				sizeof(g_quad_vertex_buffer_data)
+						/ sizeof(g_quad_vertex_buffer_data[0])
+						/ gc_numberOfVerticesPerTriangle);
 		glBindVertexArray(0);
 	}
 
