@@ -20,8 +20,6 @@
 // This file was obtained from https://github.com/triplepointfive/ogldev/blob/master/tutorial21/math_3d.h
 #include "math_3d.h"
 
-#define FILE_PATH_BUFFER_SIZE 1024
-
 // Global Constants
 //=================
 namespace
@@ -108,7 +106,7 @@ namespace
 //=================
 namespace
 {
-	// The fullscreen quad's FBO
+	// The quad's vertex and uv data
 	static const GLfloat g_quad_vertex_buffer_data[] =
 	{ -20.0f, -20.0f, 0.0f, 20.0f, -20.0f, 0.0f, -20.0f, 20.0f, 0.0f, -20.0f,
 			20.0f, 0.0f, 20.0f, -20.0f, 0.0f, 20.0f, 20.0f, 0.0f, };
