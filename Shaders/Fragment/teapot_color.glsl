@@ -53,5 +53,5 @@ void main()
 	diffuse = diffuse * vec4( g_diffuseColor, 1.0 );
 	specular = specular * vec4( g_specularColor, 1.0 );
 	ambient = ambient * vec4( g_ambientColor, 1.0 );
-	o_color = diffuse + ambient + specular;
+	o_color = diffuse + specular + ambient;
 }
