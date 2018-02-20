@@ -47,6 +47,24 @@ namespace
 	{
 		RenderingSet(cy::GLSLProgram * i_shaderProgram,
 				cy::GLSLShader * i_vertexShader,
+				cy::GLSLShader * i_fragmentShader,
+				std::string i_vertexShaderPath,
+				std::string i_fragmentShaderPath)
+		{
+			shaderProgram = i_shaderProgram;
+			vertexShader = i_vertexShader;
+			fragmentShader = i_fragmentShader;
+
+			shaderProgramID = i_shaderProgram->GetID();
+			vertexShaderID = i_vertexShader->GetID();
+			fragmentShaderID = i_fragmentShader->GetID();
+
+			vertexShaderPath = i_vertexShaderPath;
+			fragmentShaderPath = i_fragmentShaderPath;
+		}
+
+		RenderingSet(cy::GLSLProgram * i_shaderProgram,
+				cy::GLSLShader * i_vertexShader,
 				cy::GLSLShader * i_fragmentShader)
 		{
 			shaderProgram = i_shaderProgram;
@@ -56,6 +74,9 @@ namespace
 			shaderProgramID = i_shaderProgram->GetID();
 			vertexShaderID = i_vertexShader->GetID();
 			fragmentShaderID = i_fragmentShader->GetID();
+
+			vertexShaderPath = "";
+			fragmentShaderPath = "";
 		}
 
 		RenderingSet()
@@ -534,8 +555,7 @@ namespace
 {
 	// Declaration
 	//============
-	void CompileShaders(RenderingSet * i_renderingSet,
-			std::string i_vertexShaderPath, std::string i_fragmentShaderPath);
+	void CompileShaders(RenderingSet * i_renderingSet);
 	void CompileAndBindShaders(RenderingSet * i_renderingSet,
 			std::string i_vertexShaderFileName,
 			std::string i_fragmentShaderFileName);
@@ -546,11 +566,10 @@ namespace
 	// Definition
 	//===========
 	// Compile shaders with given file paths
-	void CompileShaders(RenderingSet * i_renderingSet,
-			std::string i_vertexShaderPath, std::string i_fragmentShaderPath)
+	void CompileShaders(RenderingSet * i_renderingSet)
 	{
 		bool result = i_renderingSet->vertexShader->CompileFile(
-				i_vertexShaderPath.data(),
+				i_renderingSet->vertexShaderPath.data(),
 				GL_VERTEX_SHADER);
 		if (!result)
 		{
@@ -561,7 +580,7 @@ namespace
 		i_renderingSet->shaderProgram->AttachShader(
 				i_renderingSet->vertexShaderID);
 		result = i_renderingSet->fragmentShader->CompileFile(
-				i_fragmentShaderPath.data(),
+				i_renderingSet->fragmentShaderPath.data(),
 				GL_FRAGMENT_SHADER);
 		if (!result)
 		{
@@ -591,8 +610,10 @@ namespace
 		g_vertexShaderPath += i_vertexShaderFileName;
 		g_fragmentShaderPath += i_fragmentShaderFileName;
 
-		CompileShaders(i_renderingSet, g_vertexShaderPath,
-				g_fragmentShaderPath); // Compile vertex and fragment shaders from file
+		i_renderingSet->vertexShaderPath = g_vertexShaderPath;
+		i_renderingSet->fragmentShaderPath = g_fragmentShaderPath;
+
+		CompileShaders(i_renderingSet); // Compile vertex and fragment shaders from file
 	}
 
 	// Recompile shaders at runtime
@@ -601,8 +622,7 @@ namespace
 			std::string i_fragmentShaderFilename)
 	{
 		UnloadShaderHandler(i_renderingSet);
-		CompileAndBindShaders(i_renderingSet, i_vertexShaderFilename,
-				i_fragmentShaderFilename); // Compile and bind shaders to the program
+		CompileShaders(i_renderingSet);
 	}
 }
 
