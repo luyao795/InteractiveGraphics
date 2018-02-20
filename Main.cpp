@@ -918,8 +918,8 @@ namespace
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Clear front buffer
 
 		ProcessTransformation(); // Calculate MVP matrix for transformation
-		BindOriginMeshTextures();
 		ProcessBlinnShading();
+		BindOriginMeshTextures();
 		DrawGeometry(); // Draw geometry onto the texture
 
 		textureRenderer->Unbind();
