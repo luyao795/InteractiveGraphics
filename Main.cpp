@@ -307,6 +307,7 @@ namespace
 	void UnloadTextureData();
 	void UnloadShaderHandler(RenderingSet * i_renderingSet);
 	void CleanUpShaders();
+	void CleanUpBuffers();
 	void CleanUp();
 
 	// Definition
