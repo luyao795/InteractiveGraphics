@@ -40,7 +40,7 @@ namespace
 	constexpr auto gc_initialWindowPositionY = 150;
 }
 
-// Global Structs and enums
+// Global Structs and Enums
 namespace
 {
 	struct RenderingSet
