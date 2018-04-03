@@ -30,6 +30,7 @@
 namespace
 {
 	constexpr auto gc_numberOfVerticesPerTriangle = 3;
+	constexpr auto gc_numberOfCoordinatesPerTexture = 2;
 	const auto gc_initialLightSourceLocation = cy::Point3f(0.0f, 0.0f, 10.0f);
 	constexpr auto gc_inputControlScaleParameter = 0.01f;
 	const char * gc_defaultMeshFile = "Assets/Meshes/teapot/teapot.obj";
@@ -481,7 +482,7 @@ namespace
 		glBufferData(GL_ARRAY_BUFFER, sizeof(cy::Point3f) * g_meshNormalCount,
 				i_meshNormalData, GL_STATIC_DRAW);
 		glVertexAttribPointer(1, gc_numberOfVerticesPerTriangle, GL_FLOAT,
-		GL_FALSE, 0, 0); // Set up Vertex Attribute Pointer for position
+		GL_FALSE, 0, 0); // Set up Vertex Attribute Pointer for normal
 		glEnableVertexAttribArray(1); // Enable Normal Buffer Object
 	}
 
@@ -492,8 +493,9 @@ namespace
 		glBindBuffer(GL_ARRAY_BUFFER, g_textureBufferObject);
 		glBufferData(GL_ARRAY_BUFFER, sizeof(cy::Point2f) * g_meshTexcoordCount,
 				i_meshTextureData, GL_STATIC_DRAW);
-		glEnableVertexAttribArray(2);
-		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, 0);
+		glVertexAttribPointer(2, gc_numberOfCoordinatesPerTexture, GL_FLOAT,
+		GL_FALSE, 0, 0); // Set up Vertex Attribute Pointer for texcoord
+		glEnableVertexAttribArray(2); // Enable Texture Buffer Object
 	}
 
 	// Initialize buffers needed for the program
