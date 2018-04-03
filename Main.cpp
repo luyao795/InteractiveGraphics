@@ -477,10 +477,10 @@ namespace
 	// Initialize normal buffer
 	void GenerateAndBindNormalBuffer(cy::Point3f * i_meshNormalData)
 	{
-		glGenBuffers(1, &g_normalBufferObject);
-		glBindBuffer(GL_ARRAY_BUFFER, g_normalBufferObject);
+		glGenBuffers(1, &g_normalBufferObject); //Generate Normal Buffer Object
+		glBindBuffer(GL_ARRAY_BUFFER, g_normalBufferObject); // Bind Normal Buffer Object so it's ready to use
 		glBufferData(GL_ARRAY_BUFFER, sizeof(cy::Point3f) * g_meshNormalCount,
-				i_meshNormalData, GL_STATIC_DRAW);
+				i_meshNormalData, GL_STATIC_DRAW); // Send drawing data to Normal Buffer Object
 		glVertexAttribPointer(1, gc_numberOfVerticesPerTriangle, GL_FLOAT,
 		GL_FALSE, 0, 0); // Set up Vertex Attribute Pointer for normal
 		glEnableVertexAttribArray(1); // Enable Normal Buffer Object
@@ -489,10 +489,10 @@ namespace
 	// Initialize texture buffer
 	void GenerateAndBindTextureBuffer(cy::Point2f * i_meshTextureData)
 	{
-		glGenBuffers(1, &g_textureBufferObject);
-		glBindBuffer(GL_ARRAY_BUFFER, g_textureBufferObject);
+		glGenBuffers(1, &g_textureBufferObject); //Generate Texture Buffer Object
+		glBindBuffer(GL_ARRAY_BUFFER, g_textureBufferObject); // Bind Texture Buffer Object so it's ready to use
 		glBufferData(GL_ARRAY_BUFFER, sizeof(cy::Point2f) * g_meshTexcoordCount,
-				i_meshTextureData, GL_STATIC_DRAW);
+				i_meshTextureData, GL_STATIC_DRAW); // Send drawing data to Texture Buffer Object
 		glVertexAttribPointer(2, gc_numberOfCoordinatesPerTexture, GL_FLOAT,
 		GL_FALSE, 0, 0); // Set up Vertex Attribute Pointer for texcoord
 		glEnableVertexAttribArray(2); // Enable Texture Buffer Object
