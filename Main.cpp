@@ -696,6 +696,7 @@ namespace
 	void ProcessNormalData();
 	void ProcessTextureData();
 	void ProcessMeshData();
+	void ProcessMeshData(std::vector<VertexData> i_meshData);
 	void ProcessVertexTransformation();
 	void ProcessNormalTransformation();
 	void ProcessLightTransformation();
@@ -812,6 +813,21 @@ namespace
 		ProcessNormalData(); 	// Store normal data into memory
 		ProcessTextureData();	// Store related texture data into memory
 		GenerateAndBindTextures(); // Generate and bind actual texture data
+	}
+
+	void ProcessMeshData(std::vector<VertexData> i_meshData)
+	{
+		const auto dataCount = i_meshData.size();
+		g_meshVertexCount = g_meshNormalCount = g_meshTexcoordCount = dataCount;
+		g_meshVertexData = new cy::Point3f[dataCount];
+		g_meshNormalData = new cy::Point3f[dataCount];
+		g_meshTexcoordData = new cy::Point2f[dataCount];
+		for(size_t i = 0; i < dataCount; i++)
+		{
+			g_meshVertexData[i] = cy::Point3f(i_meshData[i].position);
+			g_meshNormalData[i] = i_meshData[i].normal;
+			g_meshTexcoordData[i] = i_meshData[i].texcoord;
+		}
 	}
 
 	void ProcessVertexTransformation()
