@@ -828,6 +828,7 @@ namespace
 			g_meshNormalData[i] = i_meshData[i].normal;
 			g_meshTexcoordData[i] = i_meshData[i].texcoord;
 		}
+		GenerateAndBindTextures();
 	}
 
 	void ProcessVertexTransformation()
@@ -933,6 +934,8 @@ namespace
 		std::vector<GLubyte> meshTextureData;
 		GLuint textureWidth, textureHeight;
 
+		std::string diffuseMap = "Asset/Textures/Parallax/photosculpt-graystonewall-diffuse.png";
+
 		// Diffuse texture binding
 		LoadPNGFileAsTexture(g_diffuseTexturePath, meshTextureData,
 				textureWidth, textureHeight);
@@ -947,6 +950,8 @@ namespace
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, g_diffuseTexture);
 
+		std::string normalMap = "Asset/Textures/Parallax/photosculpt-graystonewall-normal.png";
+
 		// Specular texture binding
 		LoadPNGFileAsTexture(g_specularTexturePath, meshTextureData,
 				textureWidth, textureHeight);
@@ -960,6 +965,8 @@ namespace
 		glGenerateMipmap(GL_TEXTURE_2D);
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, g_specularTexture);
+
+		std::string displacementMap = "Asset/Textures/Parallax/photosculpt-graystonewall-displace.png";
 
 		// Ambient texture binding
 		LoadPNGFileAsTexture(g_ambientTexturePath, meshTextureData,
