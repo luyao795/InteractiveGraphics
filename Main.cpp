@@ -934,10 +934,10 @@ namespace
 		std::vector<GLubyte> meshTextureData;
 		GLuint textureWidth, textureHeight;
 
-		std::string diffuseMap = "Asset/Textures/Parallax/photosculpt-graystonewall-diffuse.png";
+		std::string diffuseMap = "Assets/Textures/Parallax/photosculpt-graystonewall-diffuse.png";
 
 		// Diffuse texture binding
-		LoadPNGFileAsTexture(g_diffuseTexturePath, meshTextureData,
+		LoadPNGFileAsTexture(diffuseMap, meshTextureData,
 				textureWidth, textureHeight);
 		glGenTextures(1, &g_diffuseTexture);
 		glBindTexture(GL_TEXTURE_2D, g_diffuseTexture);
@@ -950,10 +950,10 @@ namespace
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, g_diffuseTexture);
 
-		std::string normalMap = "Asset/Textures/Parallax/photosculpt-graystonewall-normal.png";
+		std::string normalMap = "Assets/Textures/Parallax/photosculpt-graystonewall-normal.png";
 
 		// Specular texture binding
-		LoadPNGFileAsTexture(g_specularTexturePath, meshTextureData,
+		LoadPNGFileAsTexture(normalMap, meshTextureData,
 				textureWidth, textureHeight);
 		glGenTextures(1, &g_specularTexture);
 		glBindTexture(GL_TEXTURE_2D, g_specularTexture);
@@ -966,10 +966,10 @@ namespace
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, g_specularTexture);
 
-		std::string displacementMap = "Asset/Textures/Parallax/photosculpt-graystonewall-displace.png";
+		std::string displacementMap = "Assets/Textures/Parallax/photosculpt-graystonewall-displace.png";
 
 		// Ambient texture binding
-		LoadPNGFileAsTexture(g_ambientTexturePath, meshTextureData,
+		LoadPNGFileAsTexture(displacementMap, meshTextureData,
 				textureWidth, textureHeight);
 		glGenTextures(1, &g_ambientTexture);
 		glBindTexture(GL_TEXTURE_2D, g_ambientTexture);
