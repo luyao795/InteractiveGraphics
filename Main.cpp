@@ -314,15 +314,17 @@ namespace
 	cy::Matrix4f g_modelTransformationMatrix;
 	cy::Matrix4f g_viewTransformationMatrix;
 	cy::Matrix4f g_projectionTransmationMatrix;
+	cy::Matrix4f g_modelViewTransformationMatrix;
 
 	GLuint g_vertexTransformationMatrixID; // MVP transformation matrix ID
 	GLuint g_normalTransformationMatrixID; // Normal transformation matrix ID
 	GLuint g_modelTransformationMatrixID; // Model transformation matrix ID
+	GLuint g_modelViewTransformationMatrixID; // Model View transformation matrix ID
 
 	// Parameters for Blinn Shading
 	cy::Point3f g_lightSource = gc_initialLightSourceLocation, g_viewer =
 			g_cameraPosition;
-	cy::Point3f g_diffuseColor = cy::Point3f(1.0f, 0.0f, 1.0f),
+	cy::Point3f g_diffuseColor = cy::Point3f(1.0f, 1.0f, 1.0f),
 			g_specularColor = cy::Point3f(0.0f, 1.0f, 1.0f), g_ambientColor =
 					cy::Point3f(0.2f, 0.2f, 0.2f);
 	GLfloat g_shininess = 50.0f;
@@ -520,6 +522,8 @@ namespace
 				"g_normalTransform");
 		g_modelTransformationMatrixID = glGetUniformLocation(g_shaderProgramID,
 				"g_modelTransform");
+		g_modelViewTransformationMatrixID = glGetUniformLocation(
+				g_shaderProgramID, "g_modelViewTransform");
 	}
 
 	// Bind Blinn Shading parameters to uniform variables in shaders
@@ -822,7 +826,7 @@ namespace
 		g_meshVertexData = new cy::Point3f[dataCount];
 		g_meshNormalData = new cy::Point3f[dataCount];
 		g_meshTexcoordData = new cy::Point2f[dataCount];
-		for(size_t i = 0; i < dataCount; i++)
+		for (size_t i = 0; i < dataCount; i++)
 		{
 			g_meshVertexData[i] = cy::Point3f(i_meshData[i].position);
 			g_meshNormalData[i] = i_meshData[i].normal;
@@ -851,6 +855,8 @@ namespace
 				cy::Point3f(0.0f, 0.0f, g_translationDistance));
 		g_projectionTransmationMatrix = cy::Matrix4f::MatrixPerspective(
 				ToRadian(90.0f), 1.0f, 0.1f, 100.0f);
+		g_modelViewTransformationMatrix = g_viewTransformationMatrix
+				* g_modelTransformationMatrix;
 
 		cy::Matrix4f transformMat = g_projectionTransmationMatrix
 				* g_viewTransformationMatrix * g_modelTransformationMatrix;
@@ -862,6 +868,10 @@ namespace
 		// Bind model transformation matrix for shaders to use
 		glUniformMatrix4fv(g_modelTransformationMatrixID, 1, GL_FALSE,
 				&g_modelTransformationMatrix.data[0]);
+
+		// Bind model view transformation matrix for shaders to use
+		glUniformMatrix4fv(g_modelViewTransformationMatrixID, 1, GL_FALSE,
+				&g_modelViewTransformationMatrix.data[0]);
 	}
 
 	// Calculate transformation matrix for normals
@@ -934,11 +944,12 @@ namespace
 		std::vector<GLubyte> meshTextureData;
 		GLuint textureWidth, textureHeight;
 
-		std::string diffuseMap = "Assets/Textures/Parallax/photosculpt-graystonewall-diffuse.png";
+		std::string diffuseMap =
+				"Assets/Textures/Parallax/photosculpt-graystonewall-diffuse.png";
 
 		// Diffuse texture binding
-		LoadPNGFileAsTexture(diffuseMap, meshTextureData,
-				textureWidth, textureHeight);
+		LoadPNGFileAsTexture(diffuseMap, meshTextureData, textureWidth,
+				textureHeight);
 		glGenTextures(1, &g_diffuseTexture);
 		glBindTexture(GL_TEXTURE_2D, g_diffuseTexture);
 		glEnable(GL_TEXTURE_2D);
@@ -950,11 +961,12 @@ namespace
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, g_diffuseTexture);
 
-		std::string normalMap = "Assets/Textures/Parallax/photosculpt-graystonewall-normal.png";
+		std::string normalMap =
+				"Assets/Textures/Parallax/photosculpt-graystonewall-normal.png";
 
 		// Specular texture binding
-		LoadPNGFileAsTexture(normalMap, meshTextureData,
-				textureWidth, textureHeight);
+		LoadPNGFileAsTexture(normalMap, meshTextureData, textureWidth,
+				textureHeight);
 		glGenTextures(1, &g_specularTexture);
 		glBindTexture(GL_TEXTURE_2D, g_specularTexture);
 		glEnable(GL_TEXTURE_2D);
@@ -966,11 +978,12 @@ namespace
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, g_specularTexture);
 
-		std::string displacementMap = "Assets/Textures/Parallax/photosculpt-graystonewall-displace.png";
+		std::string displacementMap =
+				"Assets/Textures/Parallax/photosculpt-graystonewall-displace.png";
 
 		// Ambient texture binding
-		LoadPNGFileAsTexture(displacementMap, meshTextureData,
-				textureWidth, textureHeight);
+		LoadPNGFileAsTexture(displacementMap, meshTextureData, textureWidth,
+				textureHeight);
 		glGenTextures(1, &g_ambientTexture);
 		glBindTexture(GL_TEXTURE_2D, g_ambientTexture);
 		glEnable(GL_TEXTURE_2D);

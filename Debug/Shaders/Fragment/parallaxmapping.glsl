@@ -7,7 +7,6 @@
 #version 420
 
 // in parameter from the vertex shader stage
-in vec4 theColor;
 in vec2 tc;
 in vec3 n;
 in vec4 vec2Camera;

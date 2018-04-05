@@ -10,15 +10,12 @@
 //layout ( location = 0 ) in vec4 vertexPosition;
 //layout ( location = 1 ) in vec4 vertexNormal;
 //layout ( location = 2 ) in vec2 vertexTexCoord;
-//layout ( location = 3 ) in vec3 vertexColor;
 
 in vec3 vertexPosition;
 in vec3 vertexNormal;
 in vec2 vertexTexCoord;
-in vec4 vertexColor;
 
 // out parameter going into the fragment shader stage
-out vec4 theColor;
 out vec2 tc;
 out vec3 n;
 out vec4 vec2Camera;
@@ -75,7 +72,6 @@ void main()
 
 	// Pass the vertex' color value and texture coordinates
 	// (from the Vertex Array Object) to the fragment shader
-	theColor = vertexColor;
 	tc = vertexTexCoord;
 
 	// The normal matrix is a 3x3 matrix (instead of 4x4)
