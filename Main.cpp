@@ -45,6 +45,8 @@ namespace
 	cy::Point3f * g_meshVertexData = nullptr;
 	cy::Point3f * g_meshNormalData = nullptr;
 	cy::Point2f * g_meshTexcoordData = nullptr;
+	cy::Point3f * g_meshTangentData = nullptr;
+	cy::Point3f * g_meshBitangentData = nullptr;
 
 	GLuint g_textureWidth, g_textureHeight;
 
@@ -52,8 +54,9 @@ namespace
 	GLuint g_meshVertexCount, g_meshNormalCount, g_meshTexcoordCount;
 
 	// Vertex Array Object, Vertex Buffer Object, Normal Buffer Object and Texture Buffer Object
-	GLuint g_vertexArrayObject, g_vertexBufferObject, g_indexBufferObject,
-			g_normalBufferObject, g_textureBufferObject;
+	GLuint g_vertexArrayObject, g_vertexBufferObject, g_normalBufferObject,
+			g_textureBufferObject, g_tangentBufferObject,
+			g_bitangentBufferObject;
 
 	GLuint g_diffuseTexture, g_specularTexture, g_ambientTexture;
 
@@ -201,8 +204,11 @@ namespace
 	void GenerateAndBindVertexBuffer(cy::Point3f * i_meshVertexData);
 	void GenerateAndBindNormalBuffer(cy::Point3f * i_meshNormalData);
 	void GenerateAndBindTextureBuffer(cy::Point2f * i_meshTextureData);
+	void GenerateAndBindTangentBuffer(cy::Point3f * i_meshTangentData);
+	void GenerateAndBindBitangentBuffer(cy::Point3f * i_meshBitangentData);
 	void GenerateAndBindBuffers(cy::Point3f * i_meshVertexData,
-			cy::Point3f * i_meshNormalData, cy::Point2f * i_meshTextureData);
+			cy::Point3f * i_meshNormalData, cy::Point2f * i_meshTextureData,
+			cy::Point3f * i_meshTangentData, cy::Point3f * i_meshBitangentData);
 	void BindTransformations();
 	void BindBlinnShadingParameters();
 	// Cleanup
@@ -290,9 +296,34 @@ namespace
 		glEnableVertexAttribArray(2); // Enable Texture Buffer Object
 	}
 
+	// Initialize tangent buffer
+	void GenerateAndBindTangentBuffer(cy::Point3f * i_meshTangentData)
+	{
+		glGenBuffers(1, &g_tangentBufferObject); //Generate Tangent Buffer Object
+		glBindBuffer(GL_ARRAY_BUFFER, g_tangentBufferObject); // Bind Tangent Buffer Object so it's ready to use
+		glBufferData(GL_ARRAY_BUFFER, sizeof(cy::Point3f) * g_meshVertexCount,
+				i_meshTangentData, GL_STATIC_DRAW); // Send drawing data to Tangent Buffer Object
+		glVertexAttribPointer(3, gc_numberOfVerticesPerTriangle, GL_FLOAT,
+		GL_FALSE, 0, 0); // Set up Vertex Attribute Pointer for tangent
+		glEnableVertexAttribArray(3); // Enable Tangent Buffer Object
+	}
+
+	// Initialize bitangent buffer
+	void GenerateAndBindBitangentBuffer(cy::Point3f * i_meshBitangentData)
+	{
+		glGenBuffers(1, &g_bitangentBufferObject); //Generate Bitangent Buffer Object
+		glBindBuffer(GL_ARRAY_BUFFER, g_bitangentBufferObject); // Bind Bitangent Buffer Object so it's ready to use
+		glBufferData(GL_ARRAY_BUFFER, sizeof(cy::Point3f) * g_meshVertexCount,
+				i_meshBitangentData, GL_STATIC_DRAW); // Send drawing data to Bitangent Buffer Object
+		glVertexAttribPointer(4, gc_numberOfVerticesPerTriangle, GL_FLOAT,
+		GL_FALSE, 0, 0); // Set up Vertex Attribute Pointer for bitangent
+		glEnableVertexAttribArray(4); // Enable Bitangent Buffer Object
+	}
+
 	// Initialize buffers needed for the program
 	void GenerateAndBindBuffers(cy::Point3f * i_meshVertexData,
-			cy::Point3f * i_meshNormalData, cy::Point2f * i_meshTextureData)
+			cy::Point3f * i_meshNormalData, cy::Point2f * i_meshTextureData,
+			cy::Point3f * i_meshTangentData, cy::Point3f * i_meshBitangentData)
 	{
 		// General steps are provided by http://www.swiftless.com/tutorials/opengl4/4-opengl-4-vao.html
 		glGenVertexArrays(1, &g_vertexArrayObject); // Generate Vertex Array Object
@@ -300,6 +331,8 @@ namespace
 		GenerateAndBindVertexBuffer(i_meshVertexData);
 		GenerateAndBindNormalBuffer(i_meshNormalData);
 		GenerateAndBindTextureBuffer(i_meshTextureData);
+		GenerateAndBindTangentBuffer(i_meshTangentData);
+		GenerateAndBindBitangentBuffer(i_meshBitangentData);
 		glBindVertexArray(0); // Unbind Vertex Array Object
 	}
 
@@ -397,9 +430,10 @@ namespace
 	void CleanUpBuffers()
 	{
 		glDeleteBuffers(1, &g_vertexBufferObject);
-		glDeleteBuffers(1, &g_indexBufferObject);
 		glDeleteBuffers(1, &g_normalBufferObject);
 		glDeleteBuffers(1, &g_textureBufferObject);
+		glDeleteBuffers(1, &g_tangentBufferObject);
+		glDeleteBuffers(1, &g_bitangentBufferObject);
 		glDeleteVertexArrays(1, &g_vertexArrayObject);
 	}
 
@@ -489,6 +523,7 @@ namespace
 	void ProcessVertexData();
 	void ProcessNormalData();
 	void ProcessTextureData();
+	void GenerateTangentBitangentData();
 	void ProcessMeshData();
 	void ProcessVertexTransformation();
 	void ProcessNormalTransformation();
@@ -599,13 +634,77 @@ namespace
 		}
 	}
 
+	void GenerateTangentBitangentData()
+	{
+		g_meshTangentData = new cy::Point3f[g_meshVertexCount];
+		g_meshBitangentData = new cy::Point3f[g_meshVertexCount];
+
+		for (size_t i = 0; i < g_meshVertexCount; i +=
+				gc_numberOfVerticesPerTriangle)
+		{
+			// Shortcuts for vertices
+			cy::Point3f & v0 = g_meshVertexData[i + 0];
+			cy::Point3f & v1 = g_meshVertexData[i + 1];
+			cy::Point3f & v2 = g_meshVertexData[i + 2];
+
+			// Shortcuts for texcoords
+			cy::Point2f & uv0 = g_meshTexcoordData[i + 0];
+			cy::Point2f & uv1 = g_meshTexcoordData[i + 1];
+			cy::Point2f & uv2 = g_meshTexcoordData[i + 2];
+
+			// Edges of the triangle: position delta
+			cy::Point3f deltaPos1 = v1 - v0;
+			cy::Point3f deltaPos2 = v2 - v0;
+
+			// Edges of the triangle: texcoord delta
+			cy::Point2f deltaUV1 = uv1 - uv0;
+			cy::Point2f deltaUV2 = uv2 - uv0;
+
+			float r = 1.0f
+					/ (deltaUV1.x * deltaUV2.y - deltaUV1.y * deltaUV2.x);
+
+			cy::Point3f tangent = (deltaPos1 * deltaUV2.y
+					- deltaPos2 * deltaUV1.y) * r;
+			cy::Point3f bitangent = (deltaPos2 * deltaUV1.x
+					- deltaPos1 * deltaUV2.x) * r;
+
+			// Set the same tangent for all three vertices of the triangle
+			g_meshTangentData[i + 0] = tangent;
+			g_meshTangentData[i + 1] = tangent;
+			g_meshTangentData[i + 2] = tangent;
+
+			// Set the same bitangent for all three vertices of the triangle
+			g_meshBitangentData[i + 0] = bitangent;
+			g_meshBitangentData[i + 1] = bitangent;
+			g_meshBitangentData[i + 2] = bitangent;
+		}
+
+		for (size_t i = 0; i < g_meshVertexCount; i++)
+		{
+			cy::Point3f & N = g_meshNormalData[i];
+			cy::Point3f & T = g_meshTangentData[i];
+			cy::Point3f & B = g_meshBitangentData[i];
+
+			// Gram-Schmidt orthogonalize
+			cy::Point3f temp = N * T.Dot(N);
+			T = T - temp;
+			T.Normalize();
+
+			// Calculate handedness
+			float temp2 = N.Cross(T).Dot(B);
+			if (temp2 < 0.0f)
+				T = T * -1.0f;
+		}
+	}
+
 	// Store mesh related data into memory
 	void ProcessMeshData()
 	{
-		ProcessVertexData(); 	// Store vertex data into memory
-		ProcessNormalData(); 	// Store normal data into memory
-		ProcessTextureData();	// Store related texture data into memory
-		GenerateAndBindTextures(); // Generate and bind actual texture data
+		ProcessVertexData(); 			// Store vertex data into memory
+		ProcessNormalData(); 			// Store normal data into memory
+		ProcessTextureData();			// Store texture data into memory
+		GenerateTangentBitangentData(); // Store tangent and bitangent data into memory
+		GenerateAndBindTextures(); 		// Generate and bind actual texture data
 	}
 
 	void ProcessVertexTransformation()
@@ -717,8 +816,7 @@ namespace
 		std::vector<GLubyte> meshTextureData;
 		GLuint textureWidth, textureHeight;
 
-		std::string diffuseMap =
-				"Assets/Textures/Parallax/bricks2_diffuse.png";
+		std::string diffuseMap = "Assets/Textures/Parallax/bricks2_diffuse.png";
 
 		// Diffuse texture binding
 		LoadPNGFileAsTexture(diffuseMap, meshTextureData, textureWidth,
@@ -734,8 +832,7 @@ namespace
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, g_diffuseTexture);
 
-		std::string normalMap =
-				"Assets/Textures/Parallax/bricks2_normal.png";
+		std::string normalMap = "Assets/Textures/Parallax/bricks2_normal.png";
 
 		// Specular texture binding
 		LoadPNGFileAsTexture(normalMap, meshTextureData, textureWidth,
@@ -949,7 +1046,7 @@ int main(int argc, char** argv)
 	CompileAndBindShaders("teapot_vertex.glsl", "teapot_color.glsl"); // Compile and bind shaders to the program
 
 	GenerateAndBindBuffers(g_meshVertexData, g_meshNormalData,
-			g_meshTexcoordData); // Generate and bind buffers and objects
+			g_meshTexcoordData, g_meshTangentData, g_meshBitangentData); // Generate and bind buffers and objects
 
 	glutDisplayFunc(DisplayContent); // Register display callback handler for window re-paint
 

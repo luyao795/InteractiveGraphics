@@ -10,6 +10,8 @@ in vec4 positionCamPos;
 in vec3 normal;
 in vec3 vertex;
 in vec2 texcoord;
+in vec3 tangent;
+in vec3 bitangent;
 
 // Output
 //=======
@@ -76,7 +78,7 @@ vec2 calcNewTexCoords(sampler2D displacementMap, vec2 tc, vec3 tsVec2Camera)
 
 vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir)
 { 
-    float height =  texture(ambientTex, texCoords).r;    
+    float height =  texture2D(ambientTex, texCoords).r;    
     vec2 p = viewDir.xy / viewDir.z * (height * 0.1);
     return texCoords - p;    
 }
@@ -90,7 +92,7 @@ void main()
 	// Calculate the TBN matrix with normalized vectors
 	vec3 toCamera = -g_viewer;
 	vec3 N = normalize( normal );
-	mat3 TBN = calcTangentMatrix( N, g_viewer, texcoord );
+	mat3 TBN = calcTangentMatrix( N, toCamera, texcoord );
 	mat3 TBN_inverse = transpose( TBN );
 	//mat3 TBN_inverse = mat3( // Inverse of TBN = transpose of TBN
 	//					TBN[0][0], TBN[1][0], TBN[2][0],
@@ -100,21 +102,46 @@ void main()
 	
 	// Transform to tangent space
 	vec3 lightSource_tangent = TBN_inverse * g_lightSource;
-	vec3 toCamera_tangent = TBN_inverse * g_viewer;
+	vec3 toCamera_tangent = TBN_inverse * toCamera;
 	vec3 vertexPos_tangent = TBN_inverse * vertexPos;
 	
 	// offset texture coordinates with Parallax Mapping
-    vec3 viewDir   = normalize(toCamera_tangent - vertexPos_tangent);
+    vec3 viewDir = normalize(toCamera_tangent - vertexPos_tangent);
     vec2 texCoords = ParallaxMapping(texcoord, viewDir);
 	if(texCoords.x > 1.0 || texCoords.y > 1.0 || texCoords.x < 0.0 || texCoords.y < 0.0)
         discard;
 
     // then sample textures with new texture coords
-    vec3 diffuse = texture(diffuseTex, texCoords).xyz;
-    vec3 normal  = texture(specularTex, texCoords).xyz;
-    normal = normalize(normal * 2.0 - 1.0);
+    vec3 color = texture2D(diffuseTex, texCoords).rgb;
+    vec3 Norm = texture2D(specularTex, texCoords).rgb;
+    Norm = normalize(Norm * 2.0 - 1.0);
 	
-	o_color = vec4(diffuse, 1.0);
+	vec3 V = normalize( toCamera_tangent - vertexPos_tangent );
+	vec3 H = normalize( V + normalize( lightSource_tangent - vertexPos_tangent ) );
+	float HN = dot( H, N );
+	HN = clamp( HN, 0.0, 1.0 );
+	float cosine = clamp(dot( N, normalize( lightSource_tangent - vertexPos_tangent ) ), 0.0, 1.0 );
+	HN = cosine != 0.0 ? HN : 0.0;
+	float HN_power = pow( HN, g_shininess );
+	vec4 diffuse = texture2D( diffuseTex, texCoords );
+	vec4 specular = vec4( g_specularColor, 1.0 ) * HN_power;
+	vec4 ambient = vec4( g_ambientColor, 1.0 );
+	//diffuse = diffuse * vec4( g_diffuseColor, 1.0 );
+	o_color = diffuse;
+	
+	//vec3 ambient = 0.2 * color;
+	//vec3 lightDir = normalize(lightSource_tangent - vertexPos_tangent);
+	
+	//float diff = max(dot(lightDir, Norm), 0.0);
+	//vec3 diffuse = diff * color;
+	
+	//vec3 reflectDir = reflect(-lightDir, Norm);
+	//vec3 halfwayDir = normalize(lightDir + viewDir);
+	//float spec = pow(max(dot(Norm, halfwayDir), 0.0), 32.0);
+	
+	//vec3 specular = vec3(0.2) * spec;
+	
+	//o_color = vec4(ambient + diffuse + specular, 1.0);
 	
 	// Calculate new texture coordinates
 	// Applying this multiple times to enhance the effect

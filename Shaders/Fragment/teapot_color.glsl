@@ -10,6 +10,8 @@ in vec4 positionCamPos;
 in vec3 normal;
 in vec3 vertex;
 in vec2 texcoord;
+in vec3 tangent;
+in vec3 bitangent;
 
 // Output
 //=======
