@@ -27,6 +27,7 @@ out vec3 vertex_world;
 out vec3 viewDir_camera;
 out vec3 lightDir_camera;
 
+out vec3 vertex_tangent;
 out vec3 viewDir_tangent;
 out vec3 lightDir_tangent;
 
@@ -89,6 +90,7 @@ void main()
 	)
 	);
 	
+	vertex_tangent = TBN * ( g_modelViewTransform * vec4( i_position, 1.0 ) ).xyz;
 	lightDir_tangent = TBN * lightDir_camera;
 	viewDir_tangent = TBN * viewDir_camera;
 }
