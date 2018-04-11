@@ -7,11 +7,19 @@
 //======
 
 in vec4 positionCamPos;
-in vec3 normal;
+
 in vec3 vertex;
+in vec3 normal;
 in vec2 texcoord;
 in vec3 tangent;
 in vec3 bitangent;
+
+in vec3 vertex_world;
+in vec3 view_camera;
+in vec3 light_camera;
+
+in vec3 view_tangent;
+in vec3 light_tangent;
 
 // Output
 //=======
