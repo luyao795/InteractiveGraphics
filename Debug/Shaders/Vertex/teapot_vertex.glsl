@@ -21,9 +21,21 @@ out vec2 texcoord;
 // Uniform
 //========
 
-uniform mat4 g_vertexTransform;
+uniform float g_shininess;
+uniform vec3 g_lightSource;
+uniform vec3 g_viewer;
+uniform vec3 g_diffuseColor;
+uniform vec3 g_specularColor;
+uniform vec3 g_ambientColor;
+
 uniform mat4 g_normalTransform;
+uniform mat4 g_modelTransform;
 uniform mat4 g_modelViewTransform;
+uniform mat4 g_vertexTransform;
+
+uniform sampler2D diffuseTex;
+uniform sampler2D specularTex;
+uniform sampler2D ambientTex;
 
 // Entry Point
 //============
@@ -31,7 +43,6 @@ uniform mat4 g_modelViewTransform;
 void main()
 {
 	gl_Position = g_vertexTransform * vec4( i_position, 1.0 );
-	positionCamPos = g_normalTransform * vec4( i_normal, 1.0 );
 	positionCamPos = g_modelViewTransform * vec4( i_position, 1.0 );
 	normal = i_normal;
 	vertex = i_position;

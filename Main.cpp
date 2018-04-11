@@ -718,7 +718,7 @@ namespace
 		GLuint textureWidth, textureHeight;
 
 		std::string diffuseMap =
-				"Assets/Textures/Parallax/photosculpt-graystonewall-diffuse.png";
+				"Assets/Textures/Parallax/bricks2_diffuse.png";
 
 		// Diffuse texture binding
 		LoadPNGFileAsTexture(diffuseMap, meshTextureData, textureWidth,
@@ -735,7 +735,7 @@ namespace
 		glBindTexture(GL_TEXTURE_2D, g_diffuseTexture);
 
 		std::string normalMap =
-				"Assets/Textures/Parallax/photosculpt-graystonewall-normal.png";
+				"Assets/Textures/Parallax/bricks2_normal.png";
 
 		// Specular texture binding
 		LoadPNGFileAsTexture(normalMap, meshTextureData, textureWidth,
@@ -752,7 +752,7 @@ namespace
 		glBindTexture(GL_TEXTURE_2D, g_specularTexture);
 
 		std::string displacementMap =
-				"Assets/Textures/Parallax/photosculpt-graystonewall-displace.png";
+				"Assets/Textures/Parallax/bricks2_displacement.png";
 
 		// Ambient texture binding
 		LoadPNGFileAsTexture(displacementMap, meshTextureData, textureWidth,
