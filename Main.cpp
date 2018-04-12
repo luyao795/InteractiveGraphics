@@ -58,7 +58,8 @@ namespace
 			g_textureBufferObject, g_tangentBufferObject,
 			g_bitangentBufferObject;
 
-	GLuint g_diffuseTexture, g_specularTexture, g_ambientTexture;
+	GLuint g_diffuseTexture, g_normalTexture, g_displacementTexture,
+			g_specularTexture;
 
 	GLuint g_shaderProgramID;
 	GLuint g_vertexShaderID, g_fragmentShaderID;
@@ -834,11 +835,11 @@ namespace
 
 		std::string normalMap = "Assets/Textures/Parallax/bricks2_normal.png";
 
-		// Specular texture binding
+		// Normal texture binding
 		LoadPNGFileAsTexture(normalMap, meshTextureData, textureWidth,
 				textureHeight);
-		glGenTextures(1, &g_specularTexture);
-		glBindTexture(GL_TEXTURE_2D, g_specularTexture);
+		glGenTextures(1, &g_normalTexture);
+		glBindTexture(GL_TEXTURE_2D, g_normalTexture);
 		glEnable(GL_TEXTURE_2D);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, textureWidth, textureHeight, 0,
 		GL_RGBA, GL_UNSIGNED_BYTE, meshTextureData.data());
@@ -846,16 +847,16 @@ namespace
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glGenerateMipmap(GL_TEXTURE_2D);
 		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, g_specularTexture);
+		glBindTexture(GL_TEXTURE_2D, g_normalTexture);
 
 		std::string displacementMap =
 				"Assets/Textures/Parallax/bricks2_displacement.png";
 
-		// Ambient texture binding
+		// Displacement texture binding
 		LoadPNGFileAsTexture(displacementMap, meshTextureData, textureWidth,
 				textureHeight);
-		glGenTextures(1, &g_ambientTexture);
-		glBindTexture(GL_TEXTURE_2D, g_ambientTexture);
+		glGenTextures(1, &g_displacementTexture);
+		glBindTexture(GL_TEXTURE_2D, g_displacementTexture);
 		glEnable(GL_TEXTURE_2D);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, textureWidth, textureHeight, 0,
 		GL_RGBA, GL_UNSIGNED_BYTE, meshTextureData.data());
@@ -863,7 +864,24 @@ namespace
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glGenerateMipmap(GL_TEXTURE_2D);
 		glActiveTexture(GL_TEXTURE2);
-		glBindTexture(GL_TEXTURE_2D, g_ambientTexture);
+		glBindTexture(GL_TEXTURE_2D, g_displacementTexture);
+
+		std::string specularMap =
+				"Assets/Textures/Parallax/bricks2_specular.png";
+
+		// Specular texture binding
+		LoadPNGFileAsTexture(displacementMap, meshTextureData, textureWidth,
+				textureHeight);
+		glGenTextures(1, &g_specularTexture);
+		glBindTexture(GL_TEXTURE_2D, g_specularTexture);
+		glEnable(GL_TEXTURE_2D);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, textureWidth, textureHeight, 0,
+		GL_RGBA, GL_UNSIGNED_BYTE, meshTextureData.data());
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glGenerateMipmap(GL_TEXTURE_2D);
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, g_specularTexture);
 	}
 
 	// Render geometries onto screen

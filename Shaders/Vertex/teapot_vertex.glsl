@@ -47,8 +47,9 @@ uniform mat4 g_modelViewTransform; 	// MV
 uniform mat4 g_vertexTransform; 	// MVP
 
 uniform sampler2D diffuseTex;		// Diffuse
-uniform sampler2D specularTex;		// Normal
-uniform sampler2D ambientTex;		// Displacement
+uniform sampler2D normalTex;		// Normal
+uniform sampler2D displacementTex;	// Displacement
+uniform sampler2D specularTex;		// Specular
 
 // Entry Point
 //============

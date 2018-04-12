@@ -43,9 +43,9 @@ uniform mat4 g_modelViewTransform;	// MV
 uniform mat4 g_vertexTransform;		// MVP
 
 uniform sampler2D diffuseTex;		// Diffuse
-uniform sampler2D specularTex;		// Normal
-uniform sampler2D ambientTex;		// Displacement
-									// Specular will be here soon
+uniform sampler2D normalTex;		// Normal
+uniform sampler2D displacementTex;	// Displacement
+uniform sampler2D specularTex;		// Specular
 
 // Constant
 //=========
@@ -63,10 +63,10 @@ void main()
 	// Material properties
 	vec3 diffuseColor = texture2D( diffuseTex , texcoord ).rgb;
 	vec3 ambientColor = g_ambientColor * diffuseColor;
-	vec3 specularColor = texture2D( ambientTex, texcoord ).rgb;
+	vec3 specularColor = texture2D( specularTex, texcoord ).rgb;
 	
 	// Local normal, in tangent space. V tex coordinate is inverted because normal map is in TGA (not in DDS) for better quality
-	vec3 normal_tangent = normalize( texture2D( specularTex, vec2( texcoord.x, -texcoord.y ) ).rgb * 2.0 - 1.0 );
+	vec3 normal_tangent = normalize( texture2D( normalTex, vec2( texcoord.x, -texcoord.y ) ).rgb * 2.0 - 1.0 );
 	
 	// Distance to the light
 	float distance = length( g_lightSource - vertex_world );
@@ -100,4 +100,6 @@ void main()
 	o_color = vec4( ambientColor + 
 	diffuseColor * lightColor * lightPower * cosTheta / ( distance * distance ) + 
 	specularColor * lightColor * lightPower * pow( cosAlpha, 5 ) / ( distance * distance ), 1.0 );
+	
+	o_color = normalize( o_color );
 }
