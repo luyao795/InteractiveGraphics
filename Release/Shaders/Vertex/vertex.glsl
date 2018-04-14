@@ -10,15 +10,12 @@
 //layout ( location = 0 ) in vec4 vertexPosition;
 //layout ( location = 1 ) in vec4 vertexNormal;
 //layout ( location = 2 ) in vec2 vertexTexCoord;
-//layout ( location = 3 ) in vec3 vertexColor;
 
-in vec4 vertexPosition;
-in vec4 vertexNormal;
+in vec3 vertexPosition;
+in vec3 vertexNormal;
 in vec2 vertexTexCoord;
-in vec3 vertexColor;
 
 // out parameter going into the fragment shader stage
-out vec4 theColor;
 out vec2 tc;
 out vec3 n;
 out vec4 vec2Camera;
@@ -65,7 +62,7 @@ void main()
 	mat4 modelViewMatrix = offset * rotY * rotX;
 
 	// Transform the coordinate system to camera space
-	vec4 cameraSpacePos = modelViewMatrix * vertexPosition;
+	vec4 cameraSpacePos = modelViewMatrix * vec4(vertexPosition, 1.0);
 
 	// Save normalized device coordinates to GPU memory
 	gl_Position = perspectiveMatrix * cameraSpacePos;
@@ -75,7 +72,6 @@ void main()
 
 	// Pass the vertex' color value and texture coordinates
 	// (from the Vertex Array Object) to the fragment shader
-	theColor = vec4(vertexColor, 1.0);
 	tc = vertexTexCoord;
 
 	// The normal matrix is a 3x3 matrix (instead of 4x4)
@@ -85,7 +81,7 @@ void main()
 						modelViewMatrix[1][0], modelViewMatrix[1][1], modelViewMatrix[1][2], 
 						modelViewMatrix[2][0], modelViewMatrix[2][1], modelViewMatrix[2][2]
 					);
-	n = normalize(normalMatrix * vertexNormal.xyz);
+	n = normalize(normalMatrix * vertexNormal);
 
 
 	vec2Camera = -cameraSpacePos;

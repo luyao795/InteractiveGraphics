@@ -5,10 +5,11 @@
 // In the fragment program, texture() becomes texture2D() or texture1D() as appropriate.
 
 // in parameter from the vertex shader stage
-in vec4 theColor;
 in vec2 tc;
 in vec3 n;
-in vec3 cP;
+in vec3 vec2Camera;
+
+out vec4 o_color;
 
 // uniforms
 uniform float time;
@@ -49,7 +50,7 @@ void main()
 
 	
 	// Calculate the TBN matrix with normalized vectors
-	vec3 camPos = normalize(cP);
+	vec3 camPos = normalize(vec2Camera);
 	vec3 normal = normalize(n);
 	mat3 TBN	= calcTangentMatrix(normal, camPos, tc);
 
@@ -74,6 +75,6 @@ void main()
 	color += vec4(0.2, 0.2, 0.2, 1.0) * texture2D(colorMap, tc.xy);
 
 	// Set the color of the currently processed fragment
-	gl_FragColor = color;
+	o_color = color;
 	//gl_FragColor = vec4(normal, 1.0);
 }
