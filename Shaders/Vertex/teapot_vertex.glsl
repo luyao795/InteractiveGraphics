@@ -75,7 +75,7 @@ void main()
 	
 	// Vector that goes from the vertex to the light, in camera space. M is ommited because it's identity.
 	vec3 light_camera = ( g_modelViewTransform * vec4( g_lightSource, 1.0 ) ).xyz;
-	lightDir_camera = light_camera + viewDir_camera;
+	lightDir_camera = light_camera - viewDir_camera;
 	
 	// model to camera = ModelView
 	vec3 tangent_camera = mat3( g_modelViewTransform ) * tangent;
