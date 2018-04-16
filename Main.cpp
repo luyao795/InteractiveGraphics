@@ -870,7 +870,7 @@ namespace
 				"Assets/Textures/Parallax/bricks2_specular.png";
 
 		// Specular texture binding
-		LoadPNGFileAsTexture(displacementMap, meshTextureData, textureWidth,
+		LoadPNGFileAsTexture(specularMap, meshTextureData, textureWidth,
 				textureHeight);
 		glGenTextures(1, &g_specularTexture);
 		glBindTexture(GL_TEXTURE_2D, g_specularTexture);
@@ -1043,7 +1043,7 @@ int main(int argc, char** argv)
 
 	SetupGLUTContextEnvironment(4, 2, GLUT_CORE_PROFILE); // Setup OpenGL Context Environment for freeglut and GLEW to use
 
-	CreateWindowWithSpecifiedSizePositionTitle(480, 480, 50, 50,
+	CreateWindowWithSpecifiedSizePositionTitle(960, 960, 50, 50,
 			"CS6610 Project - Luyao Tian"
 #ifdef _DEBUG
 					" [Debug]"

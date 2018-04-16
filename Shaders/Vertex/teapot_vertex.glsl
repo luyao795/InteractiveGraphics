@@ -79,8 +79,8 @@ void main()
 	
 	// model to camera = ModelView
 	vec3 tangent_camera = mat3( g_modelViewTransform ) * tangent;
-	vec3 bitangent_camera = mat3( g_modelViewTransform ) * bitangent;
 	vec3 normal_camera = mat3( g_modelViewTransform ) * normal;
+	vec3 bitangent_camera = cross( tangent_camera, normal_camera );
 	
 	// You can use dot products instead of building this matrix and transposing it.
 	mat3 TBN = transpose(
