@@ -3,6 +3,9 @@
 
 #version 420
 
+#define textureSize 	256.0
+#define texelSize 		1.0 / 256.0
+
 // Input
 //======
 
@@ -41,6 +44,18 @@ uniform sampler2D normalTex;		// Normal
 uniform sampler2D displacementTex;	// Displacement
 uniform sampler2D specularTex;		// Specular
 
+vec4 texture2D_bilinear( sampler2D tex, vec2 uv )
+{
+	vec2 f = fract( uv.xy * textureSize );
+	vec4 t00 = texture2D( tex, uv );
+	vec4 t10 = texture2D( tex, uv + vec2( texelSize, 0.0 ));
+	vec4 tA = mix( t00, t10, f.x );
+	vec4 t01 = texture2D( tex, uv + vec2( 0.0, texelSize ) );
+	vec4 t11 = texture2D( tex, uv + vec2( texelSize, texelSize ) );
+	vec4 tB = mix( t01, t11, f.x );
+	return mix( tA, tB, f.y );
+}
+
 // Entry Point
 //============
 
@@ -52,14 +67,14 @@ void main()
 	tangent = i_tangent;
 	bitangent = i_bitangent;
 	
-	vec3 Norm = (g_normalTransform * vec4(normal, 1.0)).xyz;
+	vec3 Norm = ( g_normalTransform * vec4( normal, 1.0 ) ).xyz;
 	
-	vec4 dv = texture2D( displacementTex, texcoord );
+	vec4 dv = texture2D_bilinear( displacementTex, texcoord );
 	
-	float df = 0.33 * dv.x + 0.33 * dv.y + 0.34 * dv.z;
+	float df = 0.25 * dv.x + 0.25 * dv.y + 0.5 * dv.z;
 	
-	vec4 newVertexPos = vec4(Norm * df, 0.0) + vec4(vertex, 1.0);
+	vec3 newVertexPos = Norm * df + vertex;
 	
 	// Output position of the vertex, in clip space: MVP * position
-	gl_Position = g_vertexTransform * newVertexPos;
+	gl_Position = g_vertexTransform * vec4( newVertexPos, 1.0 );
 }
