@@ -1042,7 +1042,7 @@ int main(int argc, char** argv)
 
 	SetupGLUTContextEnvironment(4, 2, GLUT_CORE_PROFILE); // Setup OpenGL Context Environment for freeglut and GLEW to use
 
-	CreateWindowWithSpecifiedSizePositionTitle(480, 480, 50, 50,
+	CreateWindowWithSpecifiedSizePositionTitle(960, 960, 50, 50,
 			"CS6610 Project - Luyao Tian"
 #ifdef _DEBUG
 					" [Debug]"

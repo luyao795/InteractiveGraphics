@@ -139,7 +139,8 @@ void main()
 	vec3 reflectDir = reflect( -lightDir, normals );
 	vec3 halfwayDir = normalize( lightDir - viewDir );
 	float spec = pow( max( dot( normals, halfwayDir ), 0.0 ), g_shininess );
-	vec3 Specular = spec * g_specularColor;
+	vec3 speculars = texture2D( specularTex, texcoords ).rgb;
+	vec3 Specular = spec * g_specularColor * speculars;
 	
 	o_color = vec4( Ambient + Specular + Diffuse, 1.0 );
 	
