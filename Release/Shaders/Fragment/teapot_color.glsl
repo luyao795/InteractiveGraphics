@@ -56,7 +56,7 @@ void main()
 	float HN_power = pow( HN, g_shininess );
 	vec4 diffuse = texture2D( diffuseTex, texcoord ) * cosine;
 	vec4 specular = texture2D( specularTex, texcoord ) * HN_power;
-	vec4 ambient = vec4(0.2);
+	vec4 ambient = vec4( 0.2 );
 	diffuse = diffuse * vec4( g_diffuseColor, 1.0 );
 	specular = specular * vec4( g_specularColor, 1.0 );
 	ambient = ambient * vec4( g_ambientColor, 1.0 );

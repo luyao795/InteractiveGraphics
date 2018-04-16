@@ -67,14 +67,14 @@ void main()
 	tangent = i_tangent;
 	bitangent = i_bitangent;
 	
-	vec3 Norm = (g_normalTransform * vec4(normal, 1.0)).xyz;
+	vec3 Norm = ( g_normalTransform * vec4( normal, 1.0 ) ).xyz;
 	
-	vec4 dv = texture2D( displacementTex, texcoord );
+	vec4 dv = texture2D_bilinear( displacementTex, texcoord );
 	
-	float df = 0.33 * dv.x + 0.33 * dv.y + 0.34 * dv.z;
+	float df = 0.25 * dv.x + 0.25 * dv.y + 0.5 * dv.z;
 	
-	vec4 newVertexPos = vec4(Norm * df, 0.0) + vec4(vertex, 1.0);
+	vec3 newVertexPos = Norm * df + vertex;
 	
 	// Output position of the vertex, in clip space: MVP * position
-	gl_Position = g_vertexTransform * newVertexPos;
+	gl_Position = g_vertexTransform * vec4( newVertexPos, 1.0 );
 }
