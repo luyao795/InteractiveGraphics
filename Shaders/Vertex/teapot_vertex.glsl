@@ -47,8 +47,9 @@ uniform mat4 g_modelViewTransform; 	// MV
 uniform mat4 g_vertexTransform; 	// MVP
 
 uniform sampler2D diffuseTex;		// Diffuse
-uniform sampler2D specularTex;		// Normal
-uniform sampler2D ambientTex;		// Displacement
+uniform sampler2D normalTex;		// Normal
+uniform sampler2D displacementTex;	// Displacement
+uniform sampler2D specularTex;		// Specular
 
 // Entry Point
 //============
@@ -74,12 +75,13 @@ void main()
 	
 	// Vector that goes from the vertex to the light, in camera space. M is ommited because it's identity.
 	vec3 light_camera = ( g_modelViewTransform * vec4( g_lightSource, 1.0 ) ).xyz;
-	lightDir_camera = light_camera + viewDir_camera;
+	lightDir_camera = light_camera - viewDir_camera;
 	
 	// model to camera = ModelView
 	vec3 tangent_camera = mat3( g_modelViewTransform ) * tangent;
-	vec3 bitangent_camera = mat3( g_modelViewTransform ) * bitangent;
 	vec3 normal_camera = mat3( g_modelViewTransform ) * normal;
+	//vec3 bitangent_camera = mat3( g_modelViewTransform ) * bitangent;
+	vec3 bitangent_camera = cross( tangent_camera, normal_camera );
 	
 	// You can use dot products instead of building this matrix and transposing it.
 	mat3 TBN = transpose(

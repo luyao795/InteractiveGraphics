@@ -43,8 +43,9 @@ uniform mat4 g_modelViewTransform;	// MV
 uniform mat4 g_vertexTransform;		// MVP
 
 uniform sampler2D diffuseTex;		// Diffuse
-uniform sampler2D specularTex;		// Normal
-uniform sampler2D ambientTex;		// Displacement
+uniform sampler2D normalTex;		// Normal
+uniform sampler2D displacementTex;	// Displacement
+uniform sampler2D specularTex;		// Specular
 
 // Constant
 //=========
@@ -52,36 +53,44 @@ const vec4 white = vec4(1.0, 1.0, 1.0, 1.0);
 
 // Function
 //=========
+//~ vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir)
+//~ { 
+	//~ float heightScale = 0.1;
+    //~ // number of depth layers
+    //~ const float minLayers = 8;
+    //~ const float maxLayers = 32;
+    //~ float numLayers = mix(maxLayers, minLayers, abs(dot(vec3(0.0, 0.0, 1.0), viewDir)));  
+    //~ // calculate the size of each layer
+    //~ float layerDepth = 1.0 / numLayers;
+    //~ // depth of current layer
+    //~ float currentLayerDepth = 0.0;
+    //~ // the amount to shift the texture coordinates per layer (from vector P)
+    //~ vec2 P = viewDir.xy / viewDir.z * heightScale; 
+    //~ vec2 deltaTexCoords = P / numLayers;
+  
+    //~ // get initial values
+    //~ vec2  currentTexCoords     = texcoord;
+    //~ float currentDepthMapValue = texture2D(displacementTex, currentTexCoords).r;
+      
+    //~ while(currentLayerDepth < currentDepthMapValue)
+    //~ {
+        //~ // shift texture coordinates along direction of P
+        //~ currentTexCoords -= deltaTexCoords;
+        //~ // get depthmap value at current texture coordinates
+        //~ currentDepthMapValue = texture2D(displacementTex, currentTexCoords).r;  
+        //~ // get depth of next layer
+        //~ currentLayerDepth += layerDepth;  
+    //~ }
+    
+    //~ return currentTexCoords;
+//~ }
+
 vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir)
 { 
 	float heightScale = 0.1;
-    // number of depth layers
-    const float minLayers = 8;
-    const float maxLayers = 32;
-    float numLayers = mix(maxLayers, minLayers, abs(dot(vec3(0.0, 0.0, 1.0), viewDir)));  
-    // calculate the size of each layer
-    float layerDepth = 1.0 / numLayers;
-    // depth of current layer
-    float currentLayerDepth = 0.0;
-    // the amount to shift the texture coordinates per layer (from vector P)
-    vec2 P = viewDir.xy / viewDir.z * heightScale; 
-    vec2 deltaTexCoords = P / numLayers;
-  
-    // get initial values
-    vec2  currentTexCoords     = texcoord;
-    float currentDepthMapValue = texture2D(ambientTex, currentTexCoords).r;
-      
-    while(currentLayerDepth < currentDepthMapValue)
-    {
-        // shift texture coordinates along direction of P
-        currentTexCoords -= deltaTexCoords;
-        // get depthmap value at current texture coordinates
-        currentDepthMapValue = texture2D(ambientTex, currentTexCoords).r;  
-        // get depth of next layer
-        currentLayerDepth += layerDepth;  
-    }
-    
-    return currentTexCoords;
+    float height =  texture2D(displacementTex, texCoords).r;    
+    vec2 p = viewDir.xy / viewDir.z * (height * heightScale);
+    return texCoords - p;    
 }
 
 vec2 calcNewTexCoords(sampler2D displacementMap, vec2 tc, vec3 tsVec2Camera)
@@ -112,29 +121,28 @@ void main()
         //~ discard;
 	
 	// obtain normal from normal map
-	vec3 normals = texture2D( specularTex, vec2( texcoords.x, -texcoords.y ) ).rgb;
+	vec3 normals = texture2D( normalTex, vec2( texcoords.x, -texcoords.y ) ).rgb;
 	normals = normalize( normals * 2.0 - 1.0 );
 	
 	// get diffuse color
 	vec3 diffuses = texture2D( diffuseTex, texcoords ).rgb;
 	
 	// Ambient component
-	vec3 Ambient = 0.1 * diffuses;
+	vec3 Ambient = 0.1 * diffuses * g_ambientColor;
 	
 	// Diffuse component
 	vec3 lightDir = normalize( lightDir_tangent - vertex_tangent );
 	float diff = max( dot( lightDir, normals ), 0.0 );
-	vec3 Diffuse = diff * diffuses;
+	vec3 Diffuse = diff * diffuses * g_diffuseColor;
 	
 	// Specular component
 	vec3 reflectDir = reflect( -lightDir, normals );
-	vec3 halfwayDir = normalize( lightDir + viewDir );
-	float spec = pow( max( dot( normals, halfwayDir ), 0.0 ), 32.0 );
-	vec3 Specular = spec * vec3(0.2);
+	vec3 halfwayDir = normalize( lightDir - viewDir );
+	float spec = pow( max( dot( normals, halfwayDir ), 0.0 ), g_shininess );
+	vec3 speculars = texture2D( specularTex, texcoords ).rgb;
+	vec3 Specular = spec * g_specularColor * speculars;
 	
 	o_color = vec4( Ambient + Specular + Diffuse, 1.0 );
-	
-	
 	
 	//~ vec2 newTexCoord = ParallaxMapping( texcoord, normalize( viewDir_tangent - vertex_tangent ) );
 	//~ // Light emission properties
@@ -146,7 +154,7 @@ void main()
 	//~ vec3 ambientColor = g_ambientColor * diffuseColor;
 	
 	//~ // Local normal, in tangent space. V tex coordinate is inverted because normal map is in TGA (not in DDS) for better quality
-	//~ vec3 normal_tangent = normalize( texture2D( specularTex, vec2( newTexCoord.x, -newTexCoord.y ) ).rgb * 2.0 - 1.0 );
+	//~ vec3 normal_tangent = normalize( texture2D( normalTex, vec2( newTexCoord.x, -newTexCoord.y ) ).rgb * 2.0 - 1.0 );
 	
 	//~ // Distance to the light
 	//~ float distance = length( g_lightSource - vertex_world );
