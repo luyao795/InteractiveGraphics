@@ -65,6 +65,10 @@ void main()
 	tangent = i_tangent;
 	bitangent = i_bitangent;
 	
+	vec4 dv = texture2D( displacementTex, texcoord );
+	
+	float df = 0.3 * dv.x + 0.59 * dv.y + 0.11 * dv.z;
+	
 	// Position of the vertex, in worldspace: M * position
 	vertex_world = ( g_modelTransform * vec4( i_position, 1.0 ) ).xyz;
 	
@@ -75,7 +79,7 @@ void main()
 	
 	// Vector that goes from the vertex to the light, in camera space. M is ommited because it's identity.
 	vec3 light_camera = ( g_modelViewTransform * vec4( g_lightSource, 1.0 ) ).xyz;
-	lightDir_camera = light_camera + viewDir_camera;
+	lightDir_camera = light_camera - viewDir_camera;
 	
 	// model to camera = ModelView
 	vec3 tangent_camera = mat3( g_modelViewTransform ) * tangent;
