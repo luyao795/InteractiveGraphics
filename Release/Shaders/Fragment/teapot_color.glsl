@@ -6,7 +6,7 @@
 // Input
 //======
 
-in vec4 color;
+in vec4 positionCamPos;
 in vec3 normal;
 in vec3 vertex;
 in vec2 texcoord;

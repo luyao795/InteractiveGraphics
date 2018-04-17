@@ -14,9 +14,6 @@ in vec4 vec2Camera;
 out vec4 o_color;
 
 // uniforms
-uniform float time;
-uniform float loopDuration;
-
 uniform sampler2D diffuseMap, normalMap, displacementMap; 
 
 // constant colors
@@ -61,9 +58,6 @@ vec2 calcNewTexCoords(sampler2D displacementMap, vec2 tc, vec3 tsVec2Camera)
 
 void main()
 {
-	float currTime = mod(time, loopDuration);
-	float currLerp = currTime / loopDuration;
-
 	// Vary the light direction to show off effect
 	vec3 lightDir = vec3(-1.0, 1.0, 1.0);
 

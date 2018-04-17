@@ -718,7 +718,7 @@ namespace
 		GLuint textureWidth, textureHeight;
 
 		std::string diffuseMap =
-				"Assets/Textures/Parallax/photosculpt-graystonewall-diffuse.png";
+				"Assets/Textures/Parallax/bricks2_diffuse.png";
 
 		// Diffuse texture binding
 		LoadPNGFileAsTexture(diffuseMap, meshTextureData, textureWidth,
@@ -734,11 +734,11 @@ namespace
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, g_diffuseTexture);
 
-		std::string normalMap =
-				"Assets/Textures/Parallax/photosculpt-graystonewall-normal.png";
+		std::string specularMap =
+				"Assets/Textures/Parallax/bricks2_specular.png";
 
 		// Specular texture binding
-		LoadPNGFileAsTexture(normalMap, meshTextureData, textureWidth,
+		LoadPNGFileAsTexture(specularMap, meshTextureData, textureWidth,
 				textureHeight);
 		glGenTextures(1, &g_specularTexture);
 		glBindTexture(GL_TEXTURE_2D, g_specularTexture);
@@ -751,11 +751,11 @@ namespace
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, g_specularTexture);
 
-		std::string displacementMap =
-				"Assets/Textures/Parallax/photosculpt-graystonewall-displace.png";
+		std::string ambientMap =
+				"Assets/Textures/Parallax/bricks2_diffuse.png";
 
 		// Ambient texture binding
-		LoadPNGFileAsTexture(displacementMap, meshTextureData, textureWidth,
+		LoadPNGFileAsTexture(ambientMap, meshTextureData, textureWidth,
 				textureHeight);
 		glGenTextures(1, &g_ambientTexture);
 		glBindTexture(GL_TEXTURE_2D, g_ambientTexture);
@@ -928,7 +928,7 @@ int main(int argc, char** argv)
 
 	SetupGLUTContextEnvironment(4, 2, GLUT_CORE_PROFILE); // Setup OpenGL Context Environment for freeglut and GLEW to use
 
-	CreateWindowWithSpecifiedSizePositionTitle(480, 480, 50, 50,
+	CreateWindowWithSpecifiedSizePositionTitle(960, 960, 50, 50,
 			"CS6610 Project - Luyao Tian"
 #ifdef _DEBUG
 					" [Debug]"
