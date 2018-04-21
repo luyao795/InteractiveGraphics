@@ -3,8 +3,8 @@
 
 #version 420
 
-#define textureSize 	256.0
-#define texelSize 		1.0 / 256.0
+#define textureSize 	512.0
+#define texelSize 		1.0 / textureSize
 
 // Input
 //======
@@ -73,7 +73,7 @@ void main()
 	
 	float df = 0.25 * dv.x + 0.25 * dv.y + 0.5 * dv.z;
 	
-	vec3 newVertexPos = Norm * df + vertex;
+	vec3 newVertexPos = Norm * df * 0.5 + vertex;
 	
 	// Output position of the vertex, in clip space: MVP * position
 	gl_Position = g_vertexTransform * vec4( newVertexPos, 1.0 );
