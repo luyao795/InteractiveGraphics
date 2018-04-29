@@ -7,7 +7,7 @@
 
 ## Introduction
  This is a simple interactive graphics application utilizing *OpenGL* using **freeglut**, **GLEW** and **cyCodeBase**.
- This application is being developed in **Eclipse** on *Linux*. The specific distro for development is *PCLinuxOS*.
+ This application is being developed in **Eclipse** on *Linux*.
  Please make sure the following settings are configured correctly before doing any modification.
 
 ## Configuration Steps
