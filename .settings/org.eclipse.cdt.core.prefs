@@ -1,0 +1,17 @@
+eclipse.preferences.version=1
+environment/project/cdt.managedbuild.config.gnu.exe.debug.1872095914/CWD/delimiter=\:
+environment/project/cdt.managedbuild.config.gnu.exe.debug.1872095914/CWD/operation=replace
+environment/project/cdt.managedbuild.config.gnu.exe.debug.1872095914/CWD/value=/home/cyclonite/eclipse-cpp-workspace/CS6610Project/Debug
+environment/project/cdt.managedbuild.config.gnu.exe.debug.1872095914/PWD/delimiter=\:
+environment/project/cdt.managedbuild.config.gnu.exe.debug.1872095914/PWD/operation=replace
+environment/project/cdt.managedbuild.config.gnu.exe.debug.1872095914/PWD/value=/home/cyclonite/eclipse-cpp-workspace/CS6610Project/Debug
+environment/project/cdt.managedbuild.config.gnu.exe.debug.1872095914/append=true
+environment/project/cdt.managedbuild.config.gnu.exe.debug.1872095914/appendContributed=true
+environment/project/cdt.managedbuild.config.gnu.exe.release.128135011/CWD/delimiter=\:
+environment/project/cdt.managedbuild.config.gnu.exe.release.128135011/CWD/operation=replace
+environment/project/cdt.managedbuild.config.gnu.exe.release.128135011/CWD/value=/home/cyclonite/eclipse-cpp-workspace/CS6610Project/Release
+environment/project/cdt.managedbuild.config.gnu.exe.release.128135011/PWD/delimiter=\:
+environment/project/cdt.managedbuild.config.gnu.exe.release.128135011/PWD/operation=replace
+environment/project/cdt.managedbuild.config.gnu.exe.release.128135011/PWD/value=/home/cyclonite/eclipse-cpp-workspace/CS6610Project/Release
+environment/project/cdt.managedbuild.config.gnu.exe.release.128135011/append=true
+environment/project/cdt.managedbuild.config.gnu.exe.release.128135011/appendContributed=true
