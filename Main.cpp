@@ -341,6 +341,7 @@ namespace
 	// Initialize GLEW library
 	void InitializeGLEW()
 	{
+		glewExperimental = GL_TRUE;
 		GLenum result = glewInit();
 		if (result != GLEW_OK)
 		{
