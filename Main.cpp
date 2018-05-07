@@ -163,6 +163,7 @@ void CleanUpShaders()
 
 void InitializeGLEW()
 {
+	glewExperimental = GL_TRUE;
 	// Initialize GLEW library
 	{
 		GLenum result = glewInit();
