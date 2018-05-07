@@ -10,9 +10,9 @@
  Please make sure the following settings are configured correctly before doing any modification.
 
 ## Configuration Steps
-### 0. Install freeglut and GLEW on your system and rename the project
+### 0. Install freeglut and GLEW on your system and rename the project folder
   - You should be able to install them from your distro repository. Otherwise, try installing them from their official websites
-  - Rename the project from **InteractiveGraphics** to **CS6610Project** (If you want to keep the project name as **InteractiveGraphics**, you have to open the project and change every single instance of **CS6610Project** to **InteractiveGraphics** from all settings)
+  - Rename the project folder from **InteractiveGraphics** to **CS6610Project** (If you want to keep the project folder name as **InteractiveGraphics**, you have to open the project and change every single instance of **CS6610Project** to **InteractiveGraphics** from all settings)
  
 ### 1. Check configuration setttings for the project
   - Go to **Project→Properties**
